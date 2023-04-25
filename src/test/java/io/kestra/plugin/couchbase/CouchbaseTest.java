@@ -1,6 +1,7 @@
 package io.kestra.plugin.couchbase;
 
 import com.github.dockerjava.api.model.ContainerNetwork;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.testcontainers.couchbase.BucketDefinition;
 import org.testcontainers.couchbase.CouchbaseContainer;
@@ -74,6 +75,11 @@ public class CouchbaseTest {
                 "VALUES (\"a-scoped-collection-doc\", { " +
                 "\"c_string\" : \"A collection doc\"" +
                 "})");
+    }
+
+    @AfterAll
+    static void stopCouchbase(){
+        couchbaseContainer.stop();
     }
 
     protected Query.QueryBuilder authentifiedQueryBuilder() {
