@@ -2,6 +2,7 @@ package io.kestra.plugin.couchbase;
 
 import com.github.dockerjava.api.model.ContainerNetwork;
 import org.junit.jupiter.api.BeforeAll;
+import org.testcontainers.containers.startupcheck.IndefiniteWaitOneShotStartupCheckStrategy;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.couchbase.BucketDefinition;
 import org.testcontainers.couchbase.CouchbaseContainer;
@@ -15,11 +16,9 @@ public class CouchbaseTest {
     protected static final String SCOPE = "some-scope";
     protected static final String COLLECTION = "some-collection";
 
-    protected final static CouchbaseContainer couchbaseContainer = new CouchbaseContainer(DockerImageName.parse("couchbase:latest").asCompatibleSubstituteFor("couchbase/server"))
+    protected final static CouchbaseContainer couchbaseContainer = new CouchbaseContainer("couchbase/server:latest")
         .withCredentials(USER_PASSWD_BUCKET, USER_PASSWD_BUCKET)
-        .withBucket(new BucketDefinition(USER_PASSWD_BUCKET))
-        .withStartupTimeout(Duration.ofSeconds(90))
-        .waitingFor(Wait.forHealthcheck());
+        .withBucket(new BucketDefinition(USER_PASSWD_BUCKET));
 
     @BeforeAll
     static void startCouchbase() throws IOException, InterruptedException {
