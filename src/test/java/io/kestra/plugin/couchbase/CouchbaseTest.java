@@ -1,5 +1,6 @@
 package io.kestra.plugin.couchbase;
 
+import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.model.ContainerNetwork;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -15,7 +16,21 @@ public class CouchbaseTest {
     protected static final String SCOPE = "some-scope";
     protected static final String COLLECTION = "some-collection";
 
-    protected final static CouchbaseContainer couchbaseContainer = new CouchbaseContainer("couchbase/server:latest")
+    protected final static CouchbaseContainer couchbaseContainer = new CouchbaseContainer("couchbase/server:latest") {
+        private Integer retries = 0;
+
+        @Override
+        protected void containerIsStarting(InspectContainerResponse containerInfo) {
+            try {
+                super.containerIsStarting(containerInfo);
+            }catch (Exception e){
+                retries++;
+                if(retries > 5) throw e;
+
+                this.containerIsStarting(containerInfo);
+            }
+        }
+    }
         .withBucket(new BucketDefinition(BUCKET));
 
     @BeforeAll
