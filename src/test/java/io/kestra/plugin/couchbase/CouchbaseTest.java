@@ -2,27 +2,26 @@ package io.kestra.plugin.couchbase;
 
 import com.github.dockerjava.api.model.ContainerNetwork;
 import org.junit.jupiter.api.BeforeAll;
-import org.testcontainers.containers.startupcheck.IndefiniteWaitOneShotStartupCheckStrategy;
-import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.couchbase.BucketDefinition;
 import org.testcontainers.couchbase.CouchbaseContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import java.io.IOException;
-import java.time.Duration;
 
 public class CouchbaseTest {
-    protected static final String USER_PASSWD_BUCKET = "kestra";
+    protected static String USER;
+    protected static String PASSWORD;
+    protected static final String BUCKET = "kestra";
     protected static final String SCOPE = "some-scope";
     protected static final String COLLECTION = "some-collection";
 
     protected final static CouchbaseContainer couchbaseContainer = new CouchbaseContainer("couchbase/server:latest")
-        .withCredentials(USER_PASSWD_BUCKET, USER_PASSWD_BUCKET)
-        .withBucket(new BucketDefinition(USER_PASSWD_BUCKET));
+        .withBucket(new BucketDefinition(BUCKET));
 
     @BeforeAll
     static void startCouchbase() throws IOException, InterruptedException {
         couchbaseContainer.start();
+        USER = couchbaseContainer.getUsername();
+        PASSWORD = couchbaseContainer.getPassword();
 
         String internalContainerIp = couchbaseContainer.getContainerInfo()
             .getNetworkSettings()
@@ -33,8 +32,8 @@ public class CouchbaseTest {
             .map(ContainerNetwork::getIpAddress).orElse(couchbaseContainer.getHost());
         couchbaseContainer.execInContainer("/opt/couchbase/bin/cbq",
             "-e", internalContainerIp,
-            "-c", USER_PASSWD_BUCKET + ":" + USER_PASSWD_BUCKET,
-            "-s", "INSERT INTO " + USER_PASSWD_BUCKET + " (KEY, VALUE) " +
+            "-c", USER + ":" + PASSWORD,
+            "-s", "INSERT INTO " + BUCKET + " (KEY, VALUE) " +
                 "VALUES (\"a-doc\", { " +
                 "\"c_string\" : \"Kestra Doc\"," +
                 "\"c_null\": NULL," +
@@ -54,20 +53,24 @@ public class CouchbaseTest {
                 "})");
         couchbaseContainer.execInContainer("/opt/couchbase/bin/cbq",
             "-e", internalContainerIp,
-            "-c", USER_PASSWD_BUCKET + ":" + USER_PASSWD_BUCKET,
-            "-s", "CREATE SCOPE " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`");
+            "-c", USER + ":" + PASSWORD,
+            "-s", "CREATE PRIMARY INDEX ON " + BUCKET);
         couchbaseContainer.execInContainer("/opt/couchbase/bin/cbq",
             "-e", internalContainerIp,
-            "-c", USER_PASSWD_BUCKET + ":" + USER_PASSWD_BUCKET,
-            "-s", "CREATE COLLECTION " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "`");
+            "-c", USER + ":" + PASSWORD,
+            "-s", "CREATE SCOPE " + BUCKET + ".`" + SCOPE + "`");
         couchbaseContainer.execInContainer("/opt/couchbase/bin/cbq",
             "-e", internalContainerIp,
-            "-c", USER_PASSWD_BUCKET + ":" + USER_PASSWD_BUCKET,
-            "-s", "CREATE PRIMARY INDEX ON " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "`");
+            "-c", USER + ":" + PASSWORD,
+            "-s", "CREATE COLLECTION " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "`");
         couchbaseContainer.execInContainer("/opt/couchbase/bin/cbq",
             "-e", internalContainerIp,
-            "-c", USER_PASSWD_BUCKET + ":" + USER_PASSWD_BUCKET,
-            "-s", "INSERT INTO " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` (KEY, VALUE) " +
+            "-c", USER + ":" + PASSWORD,
+            "-s", "CREATE PRIMARY INDEX ON " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "`");
+        couchbaseContainer.execInContainer("/opt/couchbase/bin/cbq",
+            "-e", internalContainerIp,
+            "-c", USER + ":" + PASSWORD,
+            "-s", "INSERT INTO " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` (KEY, VALUE) " +
                 "VALUES (\"a-scoped-collection-doc\", { " +
                 "\"c_string\" : \"A collection doc\"" +
                 "})");
@@ -76,7 +79,7 @@ public class CouchbaseTest {
     protected Query.QueryBuilder authentifiedQueryBuilder() {
         return Query.builder()
             .connectionString(couchbaseContainer.getConnectionString())
-            .username(USER_PASSWD_BUCKET)
-            .password(USER_PASSWD_BUCKET);
+            .username(USER)
+            .password(PASSWORD);
     }
 }

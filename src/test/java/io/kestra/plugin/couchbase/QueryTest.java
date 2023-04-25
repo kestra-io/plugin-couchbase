@@ -41,7 +41,7 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query query = authentifiedQueryBuilder()
-            .query("SELECT * FROM " + USER_PASSWD_BUCKET + " USE KEYS 'a-doc'")
+            .query("SELECT * FROM " + BUCKET + " USE KEYS 'a-doc'")
             .fetchType(FetchType.FETCHONE)
             .build();
 
@@ -49,7 +49,7 @@ class QueryTest extends CouchbaseTest {
 
         assertThat(queryResult.getSize(), is(1L));
 
-        Map<String, Object> row = (Map<String, Object>) queryResult.getRow().get(USER_PASSWD_BUCKET);
+        Map<String, Object> row = (Map<String, Object>) queryResult.getRow().get(BUCKET);
         assertThat(row.get("c_string"), is("Kestra Doc"));
         assertThat(row.get("c_null"), nullValue());
         assertThat(row.get("c_boolean"), is(true));
@@ -74,7 +74,7 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query query = authentifiedQueryBuilder()
-            .query("SELECT * FROM " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
+            .query("SELECT * FROM " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
             .fetchType(FetchType.FETCHONE)
             .build();
 
@@ -96,7 +96,7 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query query = authentifiedQueryBuilder()
-            .query("SELECT c_string, c_int FROM " + USER_PASSWD_BUCKET + " WHERE c_string=" + firstArg + " AND c_int=" + secondArg)
+            .query("SELECT c_string, c_int FROM " + BUCKET + " WHERE c_string=" + firstArg + " AND c_int=" + secondArg)
             .fetchType(FetchType.FETCHONE)
             .parameters(JacksonMapper.toObject(parametersJson))
             .build();
@@ -115,7 +115,7 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query.Output insertQuery = authentifiedQueryBuilder()
-            .query("INSERT INTO " + USER_PASSWD_BUCKET + " (KEY, VALUE) " +
+            .query("INSERT INTO " + BUCKET + " (KEY, VALUE) " +
                 "VALUES (\"another-doc\", { " +
                 "   \"c_string\" : \"Another Kestra Doc\"" +
                 "})" +
@@ -127,7 +127,7 @@ class QueryTest extends CouchbaseTest {
         assertThat(insertQuery.getSize(), is(1L));
 
         Query query = authentifiedQueryBuilder()
-            .query("SELECT * FROM " + USER_PASSWD_BUCKET)
+            .query("SELECT * FROM " + BUCKET)
             .fetchType(FetchType.FETCH)
             .build();
 
@@ -135,7 +135,7 @@ class QueryTest extends CouchbaseTest {
 
         assertThat(queryResult.getSize(), is(2L));
 
-        List<Map<String, Object>> rows = queryResult.getRows().stream().map(row -> (Map<String, Object>) row.get(USER_PASSWD_BUCKET)).collect(Collectors.toList());
+        List<Map<String, Object>> rows = queryResult.getRows().stream().map(row -> (Map<String, Object>) row.get(BUCKET)).collect(Collectors.toList());
         assertThat(rows, hasSize(2));
         assertThat(rows, Matchers.hasItems(
             hasEntry("c_string", "Kestra Doc"),
@@ -144,7 +144,7 @@ class QueryTest extends CouchbaseTest {
 
         // If we precise field, we get rid of bucket layer in output
         query = authentifiedQueryBuilder()
-            .query("SELECT c_string FROM " + USER_PASSWD_BUCKET)
+            .query("SELECT c_string FROM " + BUCKET)
             .fetchType(FetchType.FETCH)
             .build();
 
@@ -162,9 +162,9 @@ class QueryTest extends CouchbaseTest {
 
     @Test
     public void binaryData() throws Exception {
-        try (Cluster session = Cluster.connect(couchbaseContainer.getConnectionString(), USER_PASSWD_BUCKET, USER_PASSWD_BUCKET)) {
+        try (Cluster session = Cluster.connect(couchbaseContainer.getConnectionString(), USER, PASSWORD)) {
             session.waitUntilReady(Duration.ofSeconds(10));
-            session.bucket(USER_PASSWD_BUCKET)
+            session.bucket(BUCKET)
                 .scope(SCOPE)
                 .collection(COLLECTION)
                 .upsert(
@@ -175,7 +175,7 @@ class QueryTest extends CouchbaseTest {
         }
 
         Query.Output queryResult = authentifiedQueryBuilder()
-            .query("SELECT * FROM " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` USE KEYS 'xml-doc'")
+            .query("SELECT * FROM " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` USE KEYS 'xml-doc'")
             .fetchType(FetchType.FETCHONE)
             .build().run(runContextFactory.of());
 
@@ -188,7 +188,7 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query query = authentifiedQueryBuilder()
-            .query("SELECT * FROM " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
+            .query("SELECT * FROM " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
             .fetchType(FetchType.STORE)
             .build();
 
