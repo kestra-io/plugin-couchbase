@@ -4,6 +4,8 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.plugin.couchbase.models.FetchType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.util.Map;
+
 public interface QueryInterface {
     @Schema(
         title = "N1QL query to execute."
@@ -19,7 +21,11 @@ public interface QueryInterface {
             "my-second-field: another-value\n" +
             "or\n" +
             "- my-value\n" +
-            "- another-value"
+            "- another-value",
+        anyOf = {
+            Map.class,
+            String[].class
+        }
     )
     @PluginProperty(
         additionalProperties = String.class,
