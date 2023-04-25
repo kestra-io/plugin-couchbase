@@ -82,6 +82,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     protected Object parameters;
 
     @NotNull
+    @Builder.Default
     protected FetchType fetchType = FetchType.NONE;
 
     @NotNull
