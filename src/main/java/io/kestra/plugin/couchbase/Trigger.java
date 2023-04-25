@@ -29,38 +29,38 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Query a Couchbase database on interval to trigger flow on results."
+    title = "Query a Couchbase database on interval to trigger flow on results."
 )
 @Plugin(
-        examples = {
-                @Example(
-                        title = "Wait for a N1QL query to return results and iterate through rows",
-                        full = true,
-                        code = {
-                                "id: couchbase-trigger",
-                                "namespace: io.kestra.tests",
-                                "",
-                                "tasks:",
-                                "  - id: each",
-                                "    type: io.kestra.core.tasks.flows.EachSequential",
-                                "    tasks:",
-                                "      - id: return",
-                                "        type: io.kestra.core.tasks.debugs.Return",
-                                "        format: \"{{json(taskrun.value)}}\"",
-                                "    value: \"{{ trigger.rows }}\"",
-                                "",
-                                "triggers:",
-                                "  - id: watch",
-                                "    type: io.kestra.plugin.couchbase.Trigger",
-                                "    interval: \"PT5M\"",
-                                "    connectionString: couchbase://localhost",
-                                "    username: couchbase_user",
-                                "    password: couchbase_passwd",
-                                "    query: SELECT * FROM COUCHBASE_BUCKET(.COUCHBASE_SCOPE.COUCHBASE_COLLECTION)",
-                                "    fetchType: FETCH"
-                        }
-                )
-        }
+    examples = {
+        @Example(
+            title = "Wait for a N1QL query to return results and iterate through rows",
+            full = true,
+            code = {
+                "id: couchbase-trigger",
+                "namespace: io.kestra.tests",
+                "",
+                "tasks:",
+                "  - id: each",
+                "    type: io.kestra.core.tasks.flows.EachSequential",
+                "    tasks:",
+                "      - id: return",
+                "        type: io.kestra.core.tasks.debugs.Return",
+                "        format: \"{{json(taskrun.value)}}\"",
+                "    value: \"{{ trigger.rows }}\"",
+                "",
+                "triggers:",
+                "  - id: watch",
+                "    type: io.kestra.plugin.couchbase.Trigger",
+                "    interval: \"PT5M\"",
+                "    connectionString: couchbase://localhost",
+                "    username: couchbase_user",
+                "    password: couchbase_passwd",
+                "    query: SELECT * FROM COUCHBASE_BUCKET(.COUCHBASE_SCOPE.COUCHBASE_COLLECTION)",
+                "    fetchType: FETCH"
+            }
+        )
+    }
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Query.Output>, CouchbaseConnectionInterface, QueryInterface {
     @NotNull
@@ -94,13 +94,13 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         Logger logger = runContext.logger();
 
         Query.Output queryOutput = Query.builder()
-                .connectionString(connectionString)
-                .username(username)
-                .password(password)
-                .query(query)
-                .parameters(parameters)
-                .fetchType(fetchType)
-                .build().run(runContext);
+            .connectionString(connectionString)
+            .username(username)
+            .password(password)
+            .query(query)
+            .parameters(parameters)
+            .fetchType(fetchType)
+            .build().run(runContext);
 
         logger.debug("Found '{}' rows from '{}'", queryOutput.getSize(), runContext.render(this.query));
 
@@ -111,18 +111,18 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         String executionId = IdUtils.create();
 
         ExecutionTrigger executionTrigger = ExecutionTrigger.of(
-                this,
-                queryOutput
+            this,
+            queryOutput
         );
 
         Execution execution = Execution.builder()
-                .id(executionId)
-                .namespace(context.getNamespace())
-                .flowId(context.getFlowId())
-                .flowRevision(context.getFlowRevision())
-                .state(new State())
-                .trigger(executionTrigger)
-                .build();
+            .id(executionId)
+            .namespace(context.getNamespace())
+            .flowId(context.getFlowId())
+            .flowRevision(context.getFlowRevision())
+            .state(new State())
+            .trigger(executionTrigger)
+            .build();
 
         return Optional.of(execution);
     }

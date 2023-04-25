@@ -35,8 +35,8 @@ public abstract class CouchbaseConnection extends Task implements CouchbaseConne
 
     protected Cluster connect(RunContext runContext) throws IllegalVariableEvaluationException {
         return Cluster.connect(
-                runContext.render(connectionString),
-                authenticationOptions(runContext)
+            runContext.render(connectionString),
+            authenticationOptions(runContext)
         );
     }
 

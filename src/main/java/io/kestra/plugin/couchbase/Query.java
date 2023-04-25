@@ -29,21 +29,21 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Query a Couchbase database with N1QL."
+    title = "Query a Couchbase database with N1QL."
 )
 @Plugin(
-        examples = {
-                @Example(
-                        title = "Send a N1QL query to a Couchbase Database",
-                        code = {
-                                "connectionString: couchbase://localhost",
-                                "username: couchbase_user",
-                                "password: couchbase_passwd",
-                                "query: SELECT * FROM COUCHBASE_BUCKET(.COUCHBASE_SCOPE.COUCHBASE_COLLECTION)",
-                                "fetchType: FETCH"
-                        }
-                ),
-        }
+    examples = {
+        @Example(
+            title = "Send a N1QL query to a Couchbase Database",
+            code = {
+                "connectionString: couchbase://localhost",
+                "username: couchbase_user",
+                "password: couchbase_passwd",
+                "query: SELECT * FROM COUCHBASE_BUCKET(.COUCHBASE_SCOPE.COUCHBASE_COLLECTION)",
+                "fetchType: FETCH"
+            }
+        ),
+    }
 )
 public class Query extends CouchbaseConnection implements RunnableTask<Query.Output>, QueryInterface {
     @NotNull
@@ -71,13 +71,13 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
         switch (fetchType) {
             case FETCH: {
                 return outputBuilder
-                        .rows(rowsAsMap)
-                        .build();
+                    .rows(rowsAsMap)
+                    .build();
             }
             case FETCHONE: {
                 return outputBuilder
-                        .row(rowsAsMap.stream().findFirst().orElse(null))
-                        .build();
+                    .row(rowsAsMap.stream().findFirst().orElse(null))
+                    .build();
             }
             case STORE: {
                 File tempFile = runContext.tempFile(".ion").toFile();
@@ -90,8 +90,8 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
                 fileWriter.close();
 
                 return outputBuilder
-                        .uri(runContext.putTempFile(tempFile))
-                        .build();
+                    .uri(runContext.putTempFile(tempFile))
+                    .build();
             }
         }
 
@@ -111,25 +111,25 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-                title = "List containing the fetched data",
-                description = "Only populated if using `FETCH`."
+            title = "List containing the fetched data",
+            description = "Only populated if using `FETCH`."
         )
         private List<Map<String, Object>> rows;
 
         @Schema(
-                title = "Map containing the first row of fetched data",
-                description = "Only populated if using `FETCHONE`."
+            title = "Map containing the first row of fetched data",
+            description = "Only populated if using `FETCHONE`."
         )
         private Map<String, Object> row;
 
         @Schema(
-                title = "The uri of the stored result",
-                description = "Only populated if using `STORE`"
+            title = "The uri of the stored result",
+            description = "Only populated if using `STORE`"
         )
         private URI uri;
 
         @Schema(
-                title = "The amount of rows fetched"
+            title = "The amount of rows fetched"
         )
         private Long size;
     }

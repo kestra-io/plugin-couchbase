@@ -79,17 +79,17 @@ class TriggerTest extends CouchbaseTest {
             scheduler.run();
 
             String triggerFlowSource = Files.readString(
-                    Path.of(this.getClass().getClassLoader().getResource("flows/couchbase-listen.yml").getPath()),
-                    Charset.defaultCharset()
+                Path.of(this.getClass().getClassLoader().getResource("flows/couchbase-listen.yml").getPath()),
+                Charset.defaultCharset()
             ).replace("${couchbaseConnectionString}", couchbaseContainer.getConnectionString());
             Flow parse = yamlFlowParser.parse(triggerFlowSource, Flow.class);
 
             modelValidator.validate(parse);
 
             flowRepository.create(
-                    parse,
-                    triggerFlowSource,
-                    parse
+                parse,
+                triggerFlowSource,
+                parse
             );
 
             queueCount.await(1, TimeUnit.MINUTES);

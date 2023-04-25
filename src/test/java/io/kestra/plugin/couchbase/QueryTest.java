@@ -41,9 +41,9 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query query = authentifiedQueryBuilder()
-                .query("SELECT * FROM " + USER_PASSWD_BUCKET + " USE KEYS 'a-doc'")
-                .fetchType(FetchType.FETCHONE)
-                .build();
+            .query("SELECT * FROM " + USER_PASSWD_BUCKET + " USE KEYS 'a-doc'")
+            .fetchType(FetchType.FETCHONE)
+            .build();
 
         Query.Output queryResult = query.run(runContext);
 
@@ -74,9 +74,9 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query query = authentifiedQueryBuilder()
-                .query("SELECT * FROM " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
-                .fetchType(FetchType.FETCHONE)
-                .build();
+            .query("SELECT * FROM " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
+            .fetchType(FetchType.FETCHONE)
+            .build();
 
         Query.Output queryResult = query.run(runContext);
 
@@ -88,18 +88,18 @@ class QueryTest extends CouchbaseTest {
 
     @ParameterizedTest
     @CsvSource(value = {
-            "?;?;[\"Kestra Doc\",3]",
-            "$2;$1;[3,\"Kestra Doc\"]",
-            "$string;$int;{\"int\":3, \"string\":\"Kestra Doc\"}"
+        "?;?;[\"Kestra Doc\",3]",
+        "$2;$1;[3,\"Kestra Doc\"]",
+        "$string;$int;{\"int\":3, \"string\":\"Kestra Doc\"}"
     }, delimiter = ';')
     void preparedStatement(String firstArg, String secondArg, String parametersJson) throws Exception {
         RunContext runContext = runContextFactory.of();
 
         Query query = authentifiedQueryBuilder()
-                .query("SELECT c_string, c_int FROM " + USER_PASSWD_BUCKET + " WHERE c_string=" + firstArg + " AND c_int=" + secondArg)
-                .fetchType(FetchType.FETCHONE)
-                .parameters(JacksonMapper.toObject(parametersJson))
-                .build();
+            .query("SELECT c_string, c_int FROM " + USER_PASSWD_BUCKET + " WHERE c_string=" + firstArg + " AND c_int=" + secondArg)
+            .fetchType(FetchType.FETCHONE)
+            .parameters(JacksonMapper.toObject(parametersJson))
+            .build();
 
         Query.Output queryResult = query.run(runContext);
 
@@ -115,21 +115,21 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query.Output insertQuery = authentifiedQueryBuilder()
-                .query("INSERT INTO " + USER_PASSWD_BUCKET + " (KEY, VALUE) " +
-                        "VALUES (\"another-doc\", { " +
-                        "   \"c_string\" : \"Another Kestra Doc\"" +
-                        "})" +
-                        "RETURNING *")
-                .fetchType(FetchType.NONE)
-                .build().run(runContext);
+            .query("INSERT INTO " + USER_PASSWD_BUCKET + " (KEY, VALUE) " +
+                "VALUES (\"another-doc\", { " +
+                "   \"c_string\" : \"Another Kestra Doc\"" +
+                "})" +
+                "RETURNING *")
+            .fetchType(FetchType.NONE)
+            .build().run(runContext);
 
         // Only available if adding 'RETURNING *' to insert
         assertThat(insertQuery.getSize(), is(1L));
 
         Query query = authentifiedQueryBuilder()
-                .query("SELECT * FROM " + USER_PASSWD_BUCKET)
-                .fetchType(FetchType.FETCH)
-                .build();
+            .query("SELECT * FROM " + USER_PASSWD_BUCKET)
+            .fetchType(FetchType.FETCH)
+            .build();
 
         Query.Output queryResult = query.run(runContext);
 
@@ -138,15 +138,15 @@ class QueryTest extends CouchbaseTest {
         List<Map<String, Object>> rows = queryResult.getRows().stream().map(row -> (Map<String, Object>) row.get(USER_PASSWD_BUCKET)).collect(Collectors.toList());
         assertThat(rows, hasSize(2));
         assertThat(rows, Matchers.hasItems(
-                hasEntry("c_string", "Kestra Doc"),
-                hasEntry("c_string", "Another Kestra Doc")
+            hasEntry("c_string", "Kestra Doc"),
+            hasEntry("c_string", "Another Kestra Doc")
         ));
 
         // If we precise field, we get rid of bucket layer in output
         query = authentifiedQueryBuilder()
-                .query("SELECT c_string FROM " + USER_PASSWD_BUCKET)
-                .fetchType(FetchType.FETCH)
-                .build();
+            .query("SELECT c_string FROM " + USER_PASSWD_BUCKET)
+            .fetchType(FetchType.FETCH)
+            .build();
 
         queryResult = query.run(runContext);
 
@@ -155,8 +155,8 @@ class QueryTest extends CouchbaseTest {
         rows = queryResult.getRows();
         assertThat(rows, hasSize(2));
         assertThat(rows, Matchers.hasItems(
-                hasEntry("c_string", "Kestra Doc"),
-                hasEntry("c_string", "Another Kestra Doc")
+            hasEntry("c_string", "Kestra Doc"),
+            hasEntry("c_string", "Another Kestra Doc")
         ));
     }
 
@@ -165,19 +165,19 @@ class QueryTest extends CouchbaseTest {
         try (Cluster session = Cluster.connect(couchbaseContainer.getConnectionString(), USER_PASSWD_BUCKET, USER_PASSWD_BUCKET)) {
             session.waitUntilReady(Duration.ofSeconds(10));
             session.bucket(USER_PASSWD_BUCKET)
-                    .scope(SCOPE)
-                    .collection(COLLECTION)
-                    .upsert(
-                            "xml-doc",
-                            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><aField>someValue</aField>".getBytes("UTF-8"),
-                            UpsertOptions.upsertOptions().transcoder(RawBinaryTranscoder.INSTANCE)
-                    );
+                .scope(SCOPE)
+                .collection(COLLECTION)
+                .upsert(
+                    "xml-doc",
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?><aField>someValue</aField>".getBytes("UTF-8"),
+                    UpsertOptions.upsertOptions().transcoder(RawBinaryTranscoder.INSTANCE)
+                );
         }
 
         Query.Output queryResult = authentifiedQueryBuilder()
-                .query("SELECT * FROM " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` USE KEYS 'xml-doc'")
-                .fetchType(FetchType.FETCHONE)
-                .build().run(runContextFactory.of());
+            .query("SELECT * FROM " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` USE KEYS 'xml-doc'")
+            .fetchType(FetchType.FETCHONE)
+            .build().run(runContextFactory.of());
 
         // We should query bucket through API to be able to decode binary. Not implemented for now.
         assertThat(queryResult.getRow().get(COLLECTION), is("<binary (64 b)>"));
@@ -188,9 +188,9 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query query = authentifiedQueryBuilder()
-                .query("SELECT * FROM " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
-                .fetchType(FetchType.STORE)
-                .build();
+            .query("SELECT * FROM " + USER_PASSWD_BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
+            .fetchType(FetchType.STORE)
+            .build();
 
         Query.Output queryResult = query.run(runContext);
 
