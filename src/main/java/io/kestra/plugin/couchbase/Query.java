@@ -50,7 +50,7 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
 
     @NotNull
     @Builder.Default
-    protected FetchType fetchType = FetchType.NONE;
+    protected FetchType fetchType = FetchType.STORE;
     protected Object parameters;
 
     @NotNull
