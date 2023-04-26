@@ -20,11 +20,11 @@ repositories {
     }
 }
 
-sourceCompatibility = 11
-targetCompatibility = 11
+sourceCompatibility = 17
+targetCompatibility = 17
 
 group "io.kestra.plugin"
-description 'Plugin template for Kestra'
+description project.description
 
 tasks.withType(JavaCompile) {
     options.encoding = "UTF-8"
@@ -33,7 +33,7 @@ tasks.withType(JavaCompile) {
 
 configurations.all {
     resolutionStrategy {
-        force("org.slf4j:slf4j-api:2.0.7")
+        force("org.slf4j:slf4j-api:1.7.36")
     }
 }
 
@@ -54,7 +54,7 @@ dependencies {
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
 
     // libs included in the final jar
-    api group: 'com.google.code.gson', name: 'gson', version: '2.10.1'
+    api group: 'com.couchbase.client', name: 'java-client', version: '3.4.5'
 }
 
 
@@ -88,6 +88,7 @@ dependencies {
 
     // test
     testImplementation "org.junit.jupiter:junit-jupiter-engine"
+    testImplementation "org.junit.jupiter:junit-jupiter-params"
     testImplementation "org.hamcrest:hamcrest:2.2"
     testImplementation "org.hamcrest:hamcrest-library:2.2"
 }
@@ -110,8 +111,8 @@ jar {
     manifest {
         attributes(
                 "X-Kestra-Name": project.name,
-                "X-Kestra-Title": "Template",
-                "X-Kestra-Group": project.group + ".templates",
+                "X-Kestra-Title": "Couchbase",
+                "X-Kestra-Group": project.group + ".couchbase",
                 "X-Kestra-Description": project.description,
                 "X-Kestra-Version": project.version
         )
@@ -121,8 +122,8 @@ jar {
 pom {
     developers {
         developer {
-            id "tchiotludo"
-            name "Ludovic Dehon"
+            id "brian-mulier-p"
+            name "Brian Mulier"
         }
     }
 }

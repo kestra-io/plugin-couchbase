@@ -35,11 +35,14 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          distribution: 'adopt'
-          java-version: 11
+          distribution: 'temurin'
+          java-version: 17
 
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v1
+
+      - name: Build the docker-compose stack
+        run: docker compose -f docker-compose-ci.yml up -d --wait
 
       # Gradle check
       - name: Build with Gradle
