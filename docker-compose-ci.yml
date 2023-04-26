@@ -1,0 +1,14 @@
+version: "3.6"
+
+services:
+  couchbase:
+    build: .
+    healthcheck:
+      test: /opt/couchbase/configure-couchbase.sh /opt/couchbase/init.sql
+    ports:
+      - "8091-8097:8091-8097"
+      - "9123:9123"
+      - "11207:11207"
+      - "11210:11210"
+      - "11280:11280"
+      - "18091-18097"

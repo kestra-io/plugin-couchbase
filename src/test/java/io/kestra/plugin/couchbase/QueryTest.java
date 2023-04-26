@@ -115,7 +115,7 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query.Output insertQuery = authentifiedQueryBuilder()
-            .query("INSERT INTO " + BUCKET + " (KEY, VALUE) " +
+            .query("UPSERT INTO " + BUCKET + " (KEY, VALUE) " +
                 "VALUES (\"another-doc\", { " +
                 "   \"c_string\" : \"Another Kestra Doc\"" +
                 "})" +
@@ -162,7 +162,7 @@ class QueryTest extends CouchbaseTest {
 
     @Test
     public void binaryData() throws Exception {
-        try (Cluster session = Cluster.connect(couchbaseContainer.getConnectionString(), USER, PASSWORD)) {
+        try (Cluster session = Cluster.connect(CONNECTION_STRING, USER, PASSWORD)) {
             session.waitUntilReady(Duration.ofSeconds(10));
             session.bucket(BUCKET)
                 .scope(SCOPE)

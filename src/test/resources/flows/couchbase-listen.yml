@@ -4,9 +4,9 @@ namespace: io.kestra.tests
 triggers:
   - id: watch
     type: io.kestra.plugin.couchbase.Trigger
-    connectionString: '${couchbaseConnectionString}'
-    username: '${couchbaseUser}'
-    password: '${couchbasePassword}'
+    connectionString: 'couchbase://localhost'
+    username: 'Administrator'
+    password: 'password'
     fetchType: FETCHONE
     query: |
       SELECT * FROM kestra.`some-scope`.`some-collection` WHERE c_string='A collection doc'

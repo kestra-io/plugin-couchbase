@@ -1,15 +1,12 @@
 package io.kestra.plugin.couchbase;
 
 import io.kestra.core.models.executions.Execution;
-import io.kestra.core.models.flows.Flow;
-import io.kestra.core.models.validations.ModelValidator;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
-import io.kestra.core.repositories.FlowRepositoryInterface;
+import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.schedulers.DefaultScheduler;
 import io.kestra.core.schedulers.SchedulerExecutionStateInterface;
 import io.kestra.core.schedulers.SchedulerTriggerStateInterface;
-import io.kestra.core.serializers.YamlFlowParser;
 import io.kestra.core.services.FlowListenersInterface;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -17,9 +14,6 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -46,11 +40,7 @@ class TriggerTest extends CouchbaseTest {
     @Named(QueueFactoryInterface.EXECUTION_NAMED)
     private QueueInterface<Execution> executionQueue;
     @Inject
-    private YamlFlowParser yamlFlowParser;
-    @Inject
-    private FlowRepositoryInterface flowRepository;
-    @Inject
-    private ModelValidator modelValidator;
+    private LocalFlowRepositoryLoader localFlowRepositoryLoader;
 
     @Test
     void simpleQueryTrigger() throws Exception {
@@ -78,21 +68,7 @@ class TriggerTest extends CouchbaseTest {
 
             scheduler.run();
 
-            String triggerFlowSource = Files.readString(
-                    Path.of(this.getClass().getClassLoader().getResource("flows/couchbase-listen.yml").getPath()),
-                    Charset.defaultCharset()
-                ).replace("${couchbaseConnectionString}", couchbaseContainer.getConnectionString())
-                .replace("${couchbaseUser}", USER)
-                .replace("${couchbasePassword}", PASSWORD);
-            Flow parse = yamlFlowParser.parse(triggerFlowSource, Flow.class);
-
-            modelValidator.validate(parse);
-
-            flowRepository.create(
-                parse,
-                triggerFlowSource,
-                parse
-            );
+            localFlowRepositoryLoader.load(this.getClass().getClassLoader().getResource("flows/couchbase-listen.yml"));
 
             queueCount.await(1, TimeUnit.MINUTES);
 
