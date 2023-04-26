@@ -4,11 +4,11 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.google.common.base.Charsets;
+import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.storages.StorageInterface;
-import io.kestra.plugin.couchbase.models.FetchType;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.apache.commons.io.IOUtils;
@@ -42,7 +42,7 @@ class QueryTest extends CouchbaseTest {
 
         Query query = authentifiedQueryBuilder()
             .query("SELECT * FROM " + BUCKET + " USE KEYS 'a-doc'")
-            .fetchType(FetchType.FETCHONE)
+            .fetchType(FetchType.FETCH_ONE)
             .build();
 
         Query.Output queryResult = query.run(runContext);
@@ -75,7 +75,7 @@ class QueryTest extends CouchbaseTest {
 
         Query query = authentifiedQueryBuilder()
             .query("SELECT * FROM " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
-            .fetchType(FetchType.FETCHONE)
+            .fetchType(FetchType.FETCH_ONE)
             .build();
 
         Query.Output queryResult = query.run(runContext);
@@ -97,7 +97,7 @@ class QueryTest extends CouchbaseTest {
 
         Query query = authentifiedQueryBuilder()
             .query("SELECT c_string, c_int FROM " + BUCKET + " WHERE c_string=" + firstArg + " AND c_int=" + secondArg)
-            .fetchType(FetchType.FETCHONE)
+            .fetchType(FetchType.FETCH_ONE)
             .parameters(JacksonMapper.toObject(parametersJson))
             .build();
 
@@ -176,7 +176,7 @@ class QueryTest extends CouchbaseTest {
 
         Query.Output queryResult = authentifiedQueryBuilder()
             .query("SELECT * FROM " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` USE KEYS 'xml-doc'")
-            .fetchType(FetchType.FETCHONE)
+            .fetchType(FetchType.FETCH_ONE)
             .build().run(runContextFactory.of());
 
         // We should query bucket through API to be able to decode binary. Not implemented for now.

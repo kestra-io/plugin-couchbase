@@ -7,7 +7,7 @@ triggers:
     connectionString: 'couchbase://localhost'
     username: 'Administrator'
     password: 'password'
-    fetchType: FETCHONE
+    fetchType: FETCH_ONE
     query: |
       SELECT * FROM kestra.`some-scope`.`some-collection` WHERE c_string='A collection doc'
 

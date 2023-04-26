@@ -1,7 +1,7 @@
 package io.kestra.plugin.couchbase;
 
 import io.kestra.core.models.annotations.PluginProperty;
-import io.kestra.plugin.couchbase.models.FetchType;
+import io.kestra.core.models.tasks.common.FetchType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.Map;
@@ -14,7 +14,7 @@ public interface QueryInterface {
     String getQuery();
 
     @Schema(
-        title = "Parameters in case of positional or named parameters within query.",
+        title = "Query parameters, can be positional or named parameters.",
         description = "See Couchbase documentation about Prepared Statements for query syntax." +
             "This should be supplied with a parameter map if using named parameters or an array for positional ones",
         example = "my-field: my-value\n" +
@@ -35,7 +35,7 @@ public interface QueryInterface {
 
     @Schema(
         title = "The way you want to store the data",
-        description = "FETCHONE output the first row\n"
+        description = "FETCH_ONE output the first row\n"
             + "FETCH output all the row\n"
             + "STORE store all row in a file\n"
             + "NONE do nothing"

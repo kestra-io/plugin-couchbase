@@ -9,9 +9,9 @@ import com.couchbase.client.java.query.QueryResult;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
-import io.kestra.plugin.couchbase.models.FetchType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -40,12 +40,14 @@ import java.util.Map;
                 "username: couchbase_user",
                 "password: couchbase_passwd",
                 "query: SELECT * FROM COUCHBASE_BUCKET(.COUCHBASE_SCOPE.COUCHBASE_COLLECTION)",
-                "fetchType: FETCH"
+                "fetchType: STORE"
             }
         ),
     }
 )
 public class Query extends CouchbaseConnection implements RunnableTask<Query.Output>, QueryInterface {
+    private static final TypeRef<Map<String, Object>> MAP_TYPE_REF = new TypeRef<>() {};
+
     @NotNull
     @Builder.Default
     protected FetchType fetchType = FetchType.NONE;
@@ -64,22 +66,15 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
 
         close(session);
 
-        List<Map<String, Object>> rowsAsMap = result.rowsAs(new TypeRef<>() {
-        });
+        List<Map<String, Object>> rowsAsMap = result.rowsAs(MAP_TYPE_REF);
 
         Output.OutputBuilder outputBuilder = Output.builder().size((long) rowsAsMap.size());
-        switch (fetchType) {
-            case FETCH: {
-                return outputBuilder
-                    .rows(rowsAsMap)
-                    .build();
-            }
-            case FETCHONE: {
-                return outputBuilder
-                    .row(rowsAsMap.stream().findFirst().orElse(null))
-                    .build();
-            }
-            case STORE: {
+        return (switch (fetchType) {
+            case FETCH -> outputBuilder
+                    .rows(rowsAsMap);
+            case FETCH_ONE -> outputBuilder
+                    .row(rowsAsMap.stream().findFirst().orElse(null));
+            case STORE -> {
                 File tempFile = runContext.tempFile(".ion").toFile();
                 BufferedWriter fileWriter = new BufferedWriter(new FileWriter(tempFile));
                 try (OutputStream outputStream = new FileOutputStream(tempFile)) {
@@ -89,20 +84,23 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
                 fileWriter.flush();
                 fileWriter.close();
 
-                return outputBuilder
-                    .uri(runContext.putTempFile(tempFile))
-                    .build();
+                yield outputBuilder
+                    .uri(runContext.putTempFile(tempFile));
             }
-        }
+            default -> outputBuilder;
+        }).build();
 
-        return outputBuilder.build();
     }
 
     private QueryOptions getParametersForQuery() {
         QueryOptions queryOptions = QueryOptions.queryOptions();
 
-        if (parameters instanceof Map) queryOptions.parameters(JsonObject.from((Map<String, ?>) parameters));
-        else if (parameters instanceof List) queryOptions.parameters(JsonArray.from((List<?>) parameters));
+        if (parameters instanceof Map) {
+            queryOptions.parameters(JsonObject.from((Map<String, ?>) parameters));
+        }
+        else if (parameters instanceof List) {
+            queryOptions.parameters(JsonArray.from((List<?>) parameters));
+        }
 
         return queryOptions;
     }
@@ -118,7 +116,7 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
 
         @Schema(
             title = "Map containing the first row of fetched data",
-            description = "Only populated if using `FETCHONE`."
+            description = "Only populated if using `FETCH_ONE`."
         )
         private Map<String, Object> row;
 
