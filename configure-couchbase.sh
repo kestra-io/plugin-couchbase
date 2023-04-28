@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -m
-
 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8091/pools)" != "200" ]]; do sleep 1; done'
 
 couchbase-cli cluster-init -c localhost \
