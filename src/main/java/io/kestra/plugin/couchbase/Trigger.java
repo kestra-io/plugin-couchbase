@@ -95,6 +95,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         Logger logger = runContext.logger();
 
         Query.Output queryOutput = Query.builder()
+            .id(id)
+            .type(Query.class.getName())
             .connectionString(connectionString)
             .username(username)
             .password(password)
