@@ -4,8 +4,9 @@ import io.kestra.core.models.executions.Execution;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
+import io.kestra.core.runners.Worker;
+import io.kestra.core.schedulers.AbstractScheduler;
 import io.kestra.core.schedulers.DefaultScheduler;
-import io.kestra.core.schedulers.SchedulerExecutionStateInterface;
 import io.kestra.core.schedulers.SchedulerTriggerStateInterface;
 import io.kestra.core.services.FlowListenersInterface;
 import io.micronaut.context.ApplicationContext;
@@ -33,8 +34,6 @@ class TriggerTest extends CouchbaseTest {
     @Inject
     private FlowListenersInterface flowListenersService;
     @Inject
-    private SchedulerExecutionStateInterface executionState;
-    @Inject
     private SchedulerTriggerStateInterface triggerState;
     @Inject
     @Named(QueueFactoryInterface.EXECUTION_NAMED)
@@ -55,7 +54,14 @@ class TriggerTest extends CouchbaseTest {
         CountDownLatch queueCount = new CountDownLatch(1);
 
         // scheduler
-        try (var scheduler = new DefaultScheduler(this.applicationContext, this.flowListenersService, this.executionState, this.triggerState)) {
+        try (
+            AbstractScheduler scheduler = new DefaultScheduler(
+                this.applicationContext,
+                this.flowListenersService,
+                this.triggerState
+            );
+            Worker worker = new Worker(applicationContext, 8, null);
+        ) {
             AtomicReference<Execution> last = new AtomicReference<>();
 
             // wait for execution
@@ -66,6 +72,7 @@ class TriggerTest extends CouchbaseTest {
                 assertThat(execution.getFlowId(), is("couchbase-listen"));
             });
 
+            worker.run();
             scheduler.run();
 
             localFlowRepositoryLoader.load(this.getClass().getClassLoader().getResource("flows/couchbase-listen.yml"));
