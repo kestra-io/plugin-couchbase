@@ -66,10 +66,10 @@ class TriggerTest extends CouchbaseTest {
 
             // wait for execution
             executionQueue.receive(execution -> {
-                last.set(execution);
+                last.set(execution.getLeft());
 
                 queueCount.countDown();
-                assertThat(execution.getFlowId(), is("couchbase-listen"));
+                assertThat(execution.getLeft().getFlowId(), is("couchbase-listen"));
             });
 
             worker.run();
