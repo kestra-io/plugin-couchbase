@@ -196,7 +196,7 @@ class QueryTest extends CouchbaseTest {
 
         assertThat(queryResult.getSize(), is(1L));
 
-        String outputFileContent = IOUtils.toString(storageInterface.get(queryResult.getUri()), Charsets.UTF_8);
+        String outputFileContent = IOUtils.toString(storageInterface.get(null, queryResult.getUri()), Charsets.UTF_8);
         Map[] rows = JacksonMapper.ofIon().readValue(outputFileContent, Map[].class);
 
         assertThat(rows.length, is(1));
