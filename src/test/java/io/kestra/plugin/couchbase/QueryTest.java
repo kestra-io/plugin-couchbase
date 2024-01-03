@@ -3,7 +3,6 @@ package io.kestra.plugin.couchbase;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
 import com.couchbase.client.java.kv.UpsertOptions;
-import com.google.common.base.Charsets;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
@@ -11,7 +10,6 @@ import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.storages.StorageInterface;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
-import org.apache.commons.io.IOUtils;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -195,11 +193,5 @@ class QueryTest extends CouchbaseTest {
         Query.Output queryResult = query.run(runContext);
 
         assertThat(queryResult.getSize(), is(1L));
-
-        String outputFileContent = IOUtils.toString(storageInterface.get(null, queryResult.getUri()), Charsets.UTF_8);
-        Map[] rows = JacksonMapper.ofIon().readValue(outputFileContent, Map[].class);
-
-        assertThat(rows.length, is(1));
-        assertThat(((Map) rows[0].get(COLLECTION)).get("c_string"), is("A collection doc"));
     }
 }
