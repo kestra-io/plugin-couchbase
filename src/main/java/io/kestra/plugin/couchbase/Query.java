@@ -78,6 +78,13 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
                 File tempFile = runContext.tempFile(".ion").toFile();
                 BufferedWriter fileWriter = new BufferedWriter(new FileWriter(tempFile));
                 try (OutputStream outputStream = new FileOutputStream(tempFile)) {
+                    rowsAsMap.forEach(row -> {
+                        try {
+                            FileSerde.write(outputStream, row);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
                     FileSerde.write(outputStream, rowsAsMap);
                 }
 
