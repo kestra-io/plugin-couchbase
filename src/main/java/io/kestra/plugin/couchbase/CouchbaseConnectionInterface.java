@@ -11,13 +11,13 @@ public interface CouchbaseConnectionInterface {
     String getConnectionString();
 
     @Schema(
-        title = "Plaintext authentication username"
+        title = "Plaintext authentication username."
     )
     @PluginProperty(dynamic = true)
     String getUsername();
 
     @Schema(
-        title = "Plaintext authentication password"
+        title = "Plaintext authentication password."
     )
     @PluginProperty(dynamic = true)
     String getPassword();

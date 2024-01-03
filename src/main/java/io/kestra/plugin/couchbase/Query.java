@@ -34,13 +34,13 @@ import java.util.Map;
 @Plugin(
     examples = {
         @Example(
-            title = "Send a N1QL query to a Couchbase Database",
+            title = "Send a N1QL query to a Couchbase database.",
             code = {
                 "connectionString: couchbase://localhost",
                 "username: couchbase_user",
                 "password: couchbase_passwd",
-                "query: SELECT * FROM COUCHBASE_BUCKET(.COUCHBASE_SCOPE.COUCHBASE_COLLECTION)",
-                "fetchType: STORE"
+                "query: SELECT * FROM `COUCHBASE_BUCKET`(.`COUCHBASE_SCOPE`.`COUCHBASE_COLLECTION`)",
+                "fetchType: FETCH"
             }
         ),
     }
@@ -109,25 +109,26 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "List containing the fetched data",
+            title = "List containing the fetched data.",
             description = "Only populated if using `FETCH`."
         )
         private List<Map<String, Object>> rows;
 
         @Schema(
-            title = "Map containing the first row of fetched data",
+            title = "Map containing the first row of fetched data.",
             description = "Only populated if using `FETCH_ONE`."
         )
         private Map<String, Object> row;
 
         @Schema(
-            title = "The uri of the stored result",
-            description = "Only populated if using `STORE`"
+            title = "The URI of the stored result in Kestra's internal storage.",
+            description = "Only populated if using `STORE`."
         )
         private URI uri;
 
         @Schema(
-            title = "The amount of rows fetched"
+            title = "The number of rows to be fetched.",
+            description = "Only populated if `fetchType` is 'FETCH' or 'STORE'."
         )
         private Long size;
     }
