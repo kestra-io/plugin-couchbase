@@ -29,12 +29,12 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Query a Couchbase database on interval to trigger flow on results."
+    title = "Query a Couchbase database on regular intervals, and trigger flow on results."
 )
 @Plugin(
     examples = {
         @Example(
-            title = "Wait for a N1QL query to return results and iterate through rows",
+            title = "Wait for a N1QL query to return results, and then iterate through rows.",
             full = true,
             code = {
                 "id: couchbase-trigger",
@@ -46,7 +46,7 @@ import java.util.Optional;
                 "    tasks:",
                 "      - id: return",
                 "        type: io.kestra.core.tasks.debugs.Return",
-                "        format: \"{{json(taskrun.value)}}\"",
+                "        format: \"{{ json(taskrun.value) }}\"",
                 "    value: \"{{ trigger.rows }}\"",
                 "",
                 "triggers:",
@@ -56,7 +56,7 @@ import java.util.Optional;
                 "    connectionString: couchbase://localhost",
                 "    username: couchbase_user",
                 "    password: couchbase_passwd",
-                "    query: SELECT * FROM COUCHBASE_BUCKET(.COUCHBASE_SCOPE.COUCHBASE_COLLECTION)",
+                "    query: SELECT * FROM `COUCHBASE_BUCKET`(.`COUCHBASE_SCOPE`.`COUCHBASE_COLLECTION`)",
                 "    fetchType: FETCH"
             }
         )
