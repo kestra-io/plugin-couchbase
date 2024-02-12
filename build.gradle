@@ -50,7 +50,7 @@ dependencies {
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
 
     // libs included in the final jar
-    api group: 'com.couchbase.client', name: 'java-client', version: '3.4.5'
+    api group: 'com.couchbase.client', name: 'java-client', version: '3.5.3'
 }
 
 
