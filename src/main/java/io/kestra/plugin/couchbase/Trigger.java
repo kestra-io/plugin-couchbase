@@ -4,21 +4,16 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
-import io.kestra.core.models.executions.ExecutionTrigger;
-import io.kestra.core.models.flows.State;
 import io.kestra.core.models.tasks.common.FetchType;
-import io.kestra.core.models.triggers.AbstractTrigger;
-import io.kestra.core.models.triggers.PollingTriggerInterface;
-import io.kestra.core.models.triggers.TriggerContext;
-import io.kestra.core.models.triggers.TriggerOutput;
+import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.slf4j.Logger;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -93,7 +88,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         RunContext runContext = conditionContext.getRunContext();
         Logger logger = runContext.logger();
 
-        Query.Output queryOutput = Query.builder()
+        Query.Output run = Query.builder()
             .id(id)
             .type(Query.class.getName())
             .connectionString(connectionString)
@@ -104,25 +99,13 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .fetchType(fetchType)
             .build().run(runContext);
 
-        logger.debug("Found '{}' rows from '{}'", queryOutput.getSize(), runContext.render(this.query));
+        logger.debug("Found '{}' rows from '{}'", run.getSize(), runContext.render(this.query));
 
-        if (queryOutput.getSize() == 0) {
+        if (run.getSize() == 0) {
             return Optional.empty();
         }
 
-        ExecutionTrigger executionTrigger = ExecutionTrigger.of(
-            this,
-            queryOutput
-        );
-
-        Execution execution = Execution.builder()
-            .id(runContext.getTriggerExecutionId())
-            .namespace(context.getNamespace())
-            .flowId(context.getFlowId())
-            .flowRevision(context.getFlowRevision())
-            .state(new State())
-            .trigger(executionTrigger)
-            .build();
+        Execution execution = TriggerService.generateExecution(this, conditionContext, context, run);
 
         return Optional.of(execution);
     }
