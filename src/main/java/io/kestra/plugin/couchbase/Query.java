@@ -92,7 +92,7 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
                 fileWriter.close();
 
                 yield outputBuilder
-                    .uri(runContext.putTempFile(tempFile));
+                    .uri(runContext.storage().putFile(tempFile));
             }
             default -> outputBuilder;
         }).build();
