@@ -46,7 +46,7 @@ dependencies {
     compileOnly'org.slf4j:slf4j-api:2.0.13'
 
     // libs included in the final jar
-    api group: 'com.couchbase.client', name: 'java-client', version: '3.6.2'
+    api group: 'com.couchbase.client', name: 'java-client', version: '3.7.0'
 }
 
 
