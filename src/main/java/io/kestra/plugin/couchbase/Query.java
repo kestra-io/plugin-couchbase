@@ -75,7 +75,7 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
             case FETCH_ONE -> outputBuilder
                     .row(rowsAsMap.stream().findFirst().orElse(null));
             case STORE -> {
-                File tempFile = runContext.tempFile(".ion").toFile();
+                File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
                 BufferedWriter fileWriter = new BufferedWriter(new FileWriter(tempFile));
                 try (OutputStream outputStream = new FileOutputStream(tempFile)) {
                     rowsAsMap.forEach(row -> {
