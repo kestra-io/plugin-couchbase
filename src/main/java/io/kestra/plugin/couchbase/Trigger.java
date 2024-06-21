@@ -32,7 +32,7 @@ import java.util.Optional;
             full = true,
             code = {
                 "id: couchbase-trigger",
-                "namespace: io.kestra.tests",
+                "namespace: company.team",
                 "",
                 "tasks:",
                 "  - id: each",
