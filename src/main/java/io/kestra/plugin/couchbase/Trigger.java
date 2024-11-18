@@ -30,29 +30,29 @@ import java.util.Optional;
         @Example(
             title = "Wait for a N1QL query to return results, and then iterate through rows.",
             full = true,
-            code = {
-                "id: couchbase-trigger",
-                "namespace: company.team",
-                "",
-                "tasks:",
-                "  - id: each",
-                "    type: io.kestra.plugin.core.flow.EachSequential",
-                "    tasks:",
-                "      - id: return",
-                "        type: io.kestra.plugin.core.debug.Return",
-                "        format: \"{{ json(taskrun.value) }}\"",
-                "    value: \"{{ trigger.rows }}\"",
-                "",
-                "triggers:",
-                "  - id: watch",
-                "    type: io.kestra.plugin.couchbase.Trigger",
-                "    interval: \"PT5M\"",
-                "    connectionString: couchbase://localhost",
-                "    username: couchbase_user",
-                "    password: couchbase_passwd",
-                "    query: SELECT * FROM `COUCHBASE_BUCKET`(.`COUCHBASE_SCOPE`.`COUCHBASE_COLLECTION`)",
-                "    fetchType: FETCH"
-            }
+            code = """
+                id: couchbase_trigger
+                namespace: company.team
+                
+                tasks:
+                  - id: each
+                    type: io.kestra.plugin.core.flow.ForEach
+                    values: "{{ trigger.rows }}"
+                    tasks:
+                      - id: return
+                        type: io.kestra.plugin.core.debug.Return
+                        format: "{{ json(taskrun.value) }}"
+                
+                triggers:
+                  - id: watch
+                    type: io.kestra.plugin.couchbase.Trigger
+                    interval: "PT5M"
+                    connectionString: couchbase://localhost
+                    username: couchbase_user
+                    password: couchbase_passwd
+                    query: SELECT * FROM `COUCHBASE_BUCKET`(.`COUCHBASE_SCOPE`.`COUCHBASE_COLLECTION`)
+                    fetchType: FETCH
+                """
         )
     }
 )
