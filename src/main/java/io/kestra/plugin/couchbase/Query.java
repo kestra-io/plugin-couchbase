@@ -8,6 +8,7 @@ import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
@@ -50,7 +51,7 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
 
     @NotNull
     @Builder.Default
-    protected FetchType fetchType = FetchType.STORE;
+    protected Property<FetchType> fetchType = Property.of(FetchType.STORE);
     protected Object parameters;
 
     @NotNull
@@ -69,7 +70,7 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
         List<Map<String, Object>> rowsAsMap = result.rowsAs(MAP_TYPE_REF);
 
         Output.OutputBuilder outputBuilder = Output.builder().size((long) rowsAsMap.size());
-        return (switch (fetchType) {
+        return (switch (runContext.render(fetchType).as(FetchType.class).orElseThrow()) {
             case FETCH -> outputBuilder
                     .rows(rowsAsMap);
             case FETCH_ONE -> outputBuilder
