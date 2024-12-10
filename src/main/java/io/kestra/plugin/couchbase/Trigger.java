@@ -4,6 +4,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
@@ -33,7 +34,7 @@ import java.util.Optional;
             code = """
                 id: couchbase_trigger
                 namespace: company.team
-                
+
                 tasks:
                   - id: each
                     type: io.kestra.plugin.core.flow.ForEach
@@ -42,7 +43,7 @@ import java.util.Optional;
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
                         format: "{{ json(taskrun.value) }}"
-                
+
                 triggers:
                   - id: watch
                     type: io.kestra.plugin.couchbase.Trigger
@@ -77,7 +78,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     @NotNull
     @Builder.Default
-    protected FetchType fetchType = FetchType.STORE;
+    protected Property<FetchType> fetchType = Property.of(FetchType.STORE);
 
     @NotNull
     @Builder.Default
