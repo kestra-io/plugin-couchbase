@@ -24,7 +24,7 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Query a Couchbase database on regular intervals, and trigger flow on results."
+    title = "Trigger a flow on Couchbase database query results."
 )
 @Plugin(
     examples = {
