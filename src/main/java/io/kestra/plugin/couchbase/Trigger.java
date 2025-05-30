@@ -78,7 +78,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     @NotNull
     @Builder.Default
-    protected Property<FetchType> fetchType = Property.of(FetchType.STORE);
+    protected Property<FetchType> fetchType = Property.ofValue(FetchType.STORE);
 
     @NotNull
     @Builder.Default
