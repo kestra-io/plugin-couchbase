@@ -51,7 +51,7 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
 
     @NotNull
     @Builder.Default
-    protected Property<FetchType> fetchType = Property.of(FetchType.STORE);
+    protected Property<FetchType> fetchType = Property.ofValue(FetchType.STORE);
     protected Object parameters;
 
     @NotNull
