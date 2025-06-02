@@ -41,7 +41,7 @@ class QueryTest extends CouchbaseTest {
 
         Query query = authentifiedQueryBuilder()
             .query("SELECT * FROM " + BUCKET + " USE KEYS 'a-doc'")
-            .fetchType(Property.of(FetchType.FETCH_ONE))
+            .fetchType(Property.ofValue(FetchType.FETCH_ONE))
             .build();
 
         Query.Output queryResult = query.run(runContext);
@@ -74,7 +74,7 @@ class QueryTest extends CouchbaseTest {
 
         Query query = authentifiedQueryBuilder()
             .query("SELECT * FROM " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
-            .fetchType(Property.of(FetchType.FETCH_ONE))
+            .fetchType(Property.ofValue(FetchType.FETCH_ONE))
             .build();
 
         Query.Output queryResult = query.run(runContext);
@@ -96,7 +96,7 @@ class QueryTest extends CouchbaseTest {
 
         Query query = authentifiedQueryBuilder()
             .query("SELECT c_string, c_int FROM " + BUCKET + " WHERE c_string=" + firstArg + " AND c_int=" + secondArg)
-            .fetchType(Property.of(FetchType.FETCH_ONE))
+            .fetchType(Property.ofValue(FetchType.FETCH_ONE))
             .parameters(JacksonMapper.toObject(parametersJson))
             .build();
 
@@ -119,7 +119,7 @@ class QueryTest extends CouchbaseTest {
                 "   \"c_string\" : \"Another Kestra Doc\"" +
                 "})" +
                 "RETURNING *")
-            .fetchType(Property.of(FetchType.NONE))
+            .fetchType(Property.ofValue(FetchType.NONE))
             .build().run(runContext);
 
         // Only available if adding 'RETURNING *' to insert
@@ -127,7 +127,7 @@ class QueryTest extends CouchbaseTest {
 
         Query query = authentifiedQueryBuilder()
             .query("SELECT * FROM " + BUCKET)
-            .fetchType(Property.of(FetchType.FETCH))
+            .fetchType(Property.ofValue(FetchType.FETCH))
             .build();
 
         Query.Output queryResult = query.run(runContext);
@@ -144,7 +144,7 @@ class QueryTest extends CouchbaseTest {
         // If we precise field, we get rid of bucket layer in output
         query = authentifiedQueryBuilder()
             .query("SELECT c_string FROM " + BUCKET)
-            .fetchType(Property.of(FetchType.FETCH))
+            .fetchType(Property.ofValue(FetchType.FETCH))
             .build();
 
         queryResult = query.run(runContext);
@@ -175,7 +175,7 @@ class QueryTest extends CouchbaseTest {
 
         Query.Output queryResult = authentifiedQueryBuilder()
             .query("SELECT * FROM " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` USE KEYS 'xml-doc'")
-            .fetchType(Property.of(FetchType.FETCH_ONE))
+            .fetchType(Property.ofValue(FetchType.FETCH_ONE))
             .build().run(runContextFactory.of());
 
         // We should query bucket through API to be able to decode binary. Not implemented for now.
@@ -188,7 +188,7 @@ class QueryTest extends CouchbaseTest {
 
         Query query = authentifiedQueryBuilder()
             .query("SELECT * FROM " + BUCKET + ".`" + SCOPE + "`.`" + COLLECTION + "` WHERE c_string='A collection doc'")
-            .fetchType(Property.of(FetchType.STORE))
+            .fetchType(Property.ofValue(FetchType.STORE))
             .build();
 
         Query.Output queryResult = query.run(runContext);
