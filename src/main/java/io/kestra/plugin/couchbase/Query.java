@@ -14,11 +14,11 @@ import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.io.*;
 import java.net.URI;
 import java.util.List;
@@ -72,9 +72,9 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
         Output.OutputBuilder outputBuilder = Output.builder().size((long) rowsAsMap.size());
         return (switch (runContext.render(fetchType).as(FetchType.class).orElseThrow()) {
             case FETCH -> outputBuilder
-                    .rows(rowsAsMap);
+                .rows(rowsAsMap);
             case FETCH_ONE -> outputBuilder
-                    .row(rowsAsMap.stream().findFirst().orElse(null));
+                .row(rowsAsMap.stream().findFirst().orElse(null));
             case STORE -> {
                 File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
                 BufferedWriter fileWriter = new BufferedWriter(new FileWriter(tempFile));
@@ -105,8 +105,7 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
 
         if (parameters instanceof Map) {
             queryOptions.parameters(JsonObject.from((Map<String, ?>) parameters));
-        }
-        else if (parameters instanceof List) {
+        } else if (parameters instanceof List) {
             queryOptions.parameters(JsonArray.from((List<?>) parameters));
         }
 
