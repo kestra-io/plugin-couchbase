@@ -1,17 +1,17 @@
 package io.kestra.plugin.couchbase;
 
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.Worker;
-import io.kestra.scheduler.AbstractScheduler;
+import io.kestra.core.services.FlowListenersInterface;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.jdbc.runner.JdbcScheduler;
-import io.kestra.core.services.FlowListenersInterface;
+import io.kestra.scheduler.AbstractScheduler;
 import io.micronaut.context.ApplicationContext;
-import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import org.junit.jupiter.api.Test;
@@ -45,7 +45,9 @@ class TriggerTest extends CouchbaseTest {
     void simpleQueryTrigger() throws Exception {
         Execution execution = triggerFlow();
 
-        Map<String, Object> row = (Map<String, Object>) ((Map<String, Object>) execution.getTrigger().getVariables().get("row")).get(COLLECTION);
+        Map<String, Object> row = (Map<String, Object>) ((Map<String, Object>) execution.getTrigger()
+            .getVariables()
+            .get("row")).get(COLLECTION);
         assertThat(row.get("c_string"), is("A collection doc"));
     }
 
@@ -62,10 +64,12 @@ class TriggerTest extends CouchbaseTest {
                 );
             ) {
                 // wait for execution
-                Flux<Execution> receive = TestsUtils.receive(executionQueue, execution -> {
-                    queueCount.countDown();
-                    assertThat(execution.getLeft().getFlowId(), is("couchbase-listen"));
-                });
+                Flux<Execution> receive = TestsUtils.receive(
+                    executionQueue, execution -> {
+                        queueCount.countDown();
+                        assertThat(execution.getLeft().getFlowId(), is("couchbase-listen"));
+                    }
+                );
 
                 worker.run();
                 scheduler.run();

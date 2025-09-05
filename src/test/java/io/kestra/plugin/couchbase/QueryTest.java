@@ -3,13 +3,13 @@ package io.kestra.plugin.couchbase;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
 import com.couchbase.client.java.kv.UpsertOptions;
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.storages.StorageInterface;
-import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -134,12 +134,17 @@ class QueryTest extends CouchbaseTest {
 
         assertThat(queryResult.getSize(), is(2L));
 
-        List<Map<String, Object>> rows = queryResult.getRows().stream().map(row -> (Map<String, Object>) row.get(BUCKET)).collect(Collectors.toList());
+        List<Map<String, Object>> rows = queryResult.getRows()
+            .stream()
+            .map(row -> (Map<String, Object>) row.get(BUCKET))
+            .collect(Collectors.toList());
         assertThat(rows, hasSize(2));
-        assertThat(rows, Matchers.hasItems(
-            hasEntry("c_string", "Kestra Doc"),
-            hasEntry("c_string", "Another Kestra Doc")
-        ));
+        assertThat(
+            rows, Matchers.hasItems(
+                hasEntry("c_string", "Kestra Doc"),
+                hasEntry("c_string", "Another Kestra Doc")
+            )
+        );
 
         // If we precise field, we get rid of bucket layer in output
         query = authentifiedQueryBuilder()
@@ -153,10 +158,12 @@ class QueryTest extends CouchbaseTest {
 
         rows = queryResult.getRows();
         assertThat(rows, hasSize(2));
-        assertThat(rows, Matchers.hasItems(
-            hasEntry("c_string", "Kestra Doc"),
-            hasEntry("c_string", "Another Kestra Doc")
-        ));
+        assertThat(
+            rows, Matchers.hasItems(
+                hasEntry("c_string", "Kestra Doc"),
+                hasEntry("c_string", "Another Kestra Doc")
+            )
+        );
     }
 
     @Test
