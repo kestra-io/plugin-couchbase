@@ -202,4 +202,10 @@ class QueryTest extends CouchbaseTest {
 
         assertThat(queryResult.getSize(), is(1L));
     }
+
+
+    @Test
+    void failed() throws Exception {
+        assertThat(false, is(false));
+    }
 }
