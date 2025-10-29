@@ -23,6 +23,10 @@ CREATE
 CREATE
     PRIMARY INDEX ON kestra.`some-scope`.`some-collection`;
 
+BUILD INDEX ON kestra(`#primary`);
+
+BUILD INDEX ON kestra.`some-scope`.`some-collection`(`#primary`);
+
 INSERT INTO kestra.`some-scope`.`some-collection` (KEY, VALUE)
     VALUES ("a-scoped-collection-doc",
-            { "c_string" : "A collection doc"})
+            { "c_string" : "A collection doc" });
