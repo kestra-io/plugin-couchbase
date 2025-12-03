@@ -1,8 +1,8 @@
 group: io.kestra.plugin.couchbase
 name: "couchbase"
 title: "Couchbase"
-description: "This sub-group of plugins contains tasks for using Couchbase. Couchbase is an award-winning distributed NoSQL cloud database that delivers unmatched versatility, performance, scalability, and financial value for all of your cloud, mobile, on-premises, hybrid, distributed cloud, and edge computing applications."
-body: ""
+description: "Tasks that execute Couchbase N1QL queries and trigger Kestra flows from query results."
+body: "Run Couchbase operations from Kestra with the Query task for on-demand N1QL execution and the Trigger to poll queries on a schedule. Supply the database connection string, username, password, and query; optional parameters and fetchType control whether rows are returned, a single row is provided, or results are stored for downstream tasks."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"
