@@ -24,7 +24,8 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Trigger a flow on Couchbase database query results."
+    title = "Poll Couchbase query and start flow",
+    description = "Periodically runs the rendered N1QL query and starts the flow when rows are returned. Default interval is 60 seconds and fetchType defaults to STORE, writing results to Kestra internal storage; use FETCH or FETCH_ONE to expose rows inline."
 )
 @Plugin(
     examples = {

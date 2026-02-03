@@ -9,15 +9,15 @@ import java.util.Map;
 
 public interface QueryInterface {
     @Schema(
-        title = "N1QL query to execute on Couchbase database."
+        title = "Renderable N1QL statement to run",
+        description = "Rendered with flow variables before execution against Couchbase. Ensure bucket, scope, and collection references are accessible to the provided credentials."
     )
     @PluginProperty(dynamic = true)
     String getQuery();
 
     @Schema(
-        title = "Query parameters, can be positional or named parameters.",
-        description = "See Couchbase documentation about Prepared Statements for query syntax. " +
-            "This should be supplied with a parameter map if using named parameters, or an array for positional ones.",
+        title = "Query parameters for placeholders",
+        description = "Renderable values for named or positional parameters. Use a map for named parameters or a list/array for positional ones; see Couchbase prepared statement syntax for details.",
         example = "my-field: my-value\n" +
             "my-second-field: another-value\n" +
             "or\n" +
@@ -35,11 +35,8 @@ public interface QueryInterface {
     Object getParameters();
 
     @Schema(
-        title = "The way you want to fetch and/or store the data.",
-        description = "FETCH_ONE - output just the first row.\n"
-            + "FETCH - output all the rows.\n"
-            + "STORE - store all the rows in a file.\n"
-            + "NONE - do nothing."
+        title = "How to return or store query results",
+        description = "Defaults to STORE, which writes all rows to Kestra internal storage. FETCH returns all rows inline, FETCH_ONE returns the first row, and NONE skips output."
     )
     Property<FetchType> getFetchType();
 }
