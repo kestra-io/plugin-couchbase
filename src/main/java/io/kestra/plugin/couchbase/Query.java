@@ -30,7 +30,8 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Query a Couchbase database with N1QL."
+    title = "Run Couchbase N1QL and capture results",
+    description = "Executes the rendered N1QL statement on the target cluster. Defaults to STORE, writing the full result set to Kestra internal storage; use FETCH to return all rows inline or FETCH_ONE for just the first row. Parameters can be named or positional."
 )
 @Plugin(
     examples = {
@@ -117,26 +118,26 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "List containing the fetched data.",
-            description = "Only populated if using `FETCH`."
+            title = "All rows returned",
+            description = "Present when fetchType resolves to FETCH; each row is returned as a JSON map."
         )
         private List<Map<String, Object>> rows;
 
         @Schema(
-            title = "Map containing the first row of fetched data.",
-            description = "Only populated if using `FETCH_ONE`."
+            title = "First row returned",
+            description = "Present when fetchType resolves to FETCH_ONE; null if the query returns no rows."
         )
         private Map<String, Object> row;
 
         @Schema(
-            title = "The URI of the stored result in Kestra's internal storage.",
-            description = "Only populated if using `STORE`."
+            title = "Stored result URI",
+            description = "Present when fetchType resolves to STORE; points to the Kestra internal storage object containing all rows."
         )
         private URI uri;
 
         @Schema(
-            title = "The number of rows to be fetched.",
-            description = "Only populated if `fetchType` is 'FETCH' or 'STORE'."
+            title = "Number of rows returned",
+            description = "Set when fetchType is FETCH or STORE; useful for branching or triggers."
         )
         private Long size;
     }
