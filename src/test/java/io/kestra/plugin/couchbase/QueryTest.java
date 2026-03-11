@@ -1,25 +1,28 @@
 package io.kestra.plugin.couchbase;
 
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
 import com.couchbase.client.java.kv.UpsertOptions;
+
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.storages.StorageInterface;
-import io.kestra.core.junit.annotations.KestraTest;
-import jakarta.inject.Inject;
-import org.hamcrest.Matchers;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -86,11 +89,13 @@ class QueryTest extends CouchbaseTest {
     }
 
     @ParameterizedTest
-    @CsvSource(value = {
-        "?;?;[\"Kestra Doc\",3]",
-        "$2;$1;[3,\"Kestra Doc\"]",
-        "$string;$int;{\"int\":3, \"string\":\"Kestra Doc\"}"
-    }, delimiter = ';')
+    @CsvSource(
+        value = {
+            "?;?;[\"Kestra Doc\",3]",
+            "$2;$1;[3,\"Kestra Doc\"]",
+            "$string;$int;{\"int\":3, \"string\":\"Kestra Doc\"}"
+        }, delimiter = ';'
+    )
     void preparedStatement(String firstArg, String secondArg, String parametersJson) throws Exception {
         RunContext runContext = runContextFactory.of();
 
@@ -114,11 +119,13 @@ class QueryTest extends CouchbaseTest {
         RunContext runContext = runContextFactory.of();
 
         Query.Output insertQuery = authentifiedQueryBuilder()
-            .query("UPSERT INTO " + BUCKET + " (KEY, VALUE) " +
-                "VALUES (\"another-doc\", { " +
-                "   \"c_string\" : \"Another Kestra Doc\"" +
-                "})" +
-                "RETURNING *")
+            .query(
+                "UPSERT INTO " + BUCKET + " (KEY, VALUE) " +
+                    "VALUES (\"another-doc\", { " +
+                    "   \"c_string\" : \"Another Kestra Doc\"" +
+                    "})" +
+                    "RETURNING *"
+            )
             .fetchType(Property.ofValue(FetchType.NONE))
             .build().run(runContext);
 
@@ -136,10 +143,12 @@ class QueryTest extends CouchbaseTest {
 
         List<Map<String, Object>> rows = queryResult.getRows().stream().map(row -> (Map<String, Object>) row.get(BUCKET)).collect(Collectors.toList());
         assertThat(rows, hasSize(2));
-        assertThat(rows, Matchers.hasItems(
-            hasEntry("c_string", "Kestra Doc"),
-            hasEntry("c_string", "Another Kestra Doc")
-        ));
+        assertThat(
+            rows, Matchers.hasItems(
+                hasEntry("c_string", "Kestra Doc"),
+                hasEntry("c_string", "Another Kestra Doc")
+            )
+        );
 
         // If we precise field, we get rid of bucket layer in output
         query = authentifiedQueryBuilder()
@@ -153,10 +162,12 @@ class QueryTest extends CouchbaseTest {
 
         rows = queryResult.getRows();
         assertThat(rows, hasSize(2));
-        assertThat(rows, Matchers.hasItems(
-            hasEntry("c_string", "Kestra Doc"),
-            hasEntry("c_string", "Another Kestra Doc")
-        ));
+        assertThat(
+            rows, Matchers.hasItems(
+                hasEntry("c_string", "Kestra Doc"),
+                hasEntry("c_string", "Another Kestra Doc")
+            )
+        );
     }
 
     @Test

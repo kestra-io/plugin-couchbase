@@ -1,6 +1,7 @@
 package io.kestra.plugin.couchbase;
 
 import io.kestra.core.models.annotations.PluginProperty;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public interface CouchbaseConnectionInterface {

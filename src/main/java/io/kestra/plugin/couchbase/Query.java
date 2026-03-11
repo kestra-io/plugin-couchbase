@@ -1,11 +1,17 @@
 package io.kestra.plugin.couchbase;
 
+import java.io.*;
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
+
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
@@ -13,16 +19,12 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
-import lombok.experimental.SuperBuilder;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import java.io.*;
-import java.net.URI;
-import java.util.List;
-import java.util.Map;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
 @ToString
@@ -48,7 +50,8 @@ import java.util.Map;
     }
 )
 public class Query extends CouchbaseConnection implements RunnableTask<Query.Output>, QueryInterface {
-    private static final TypeRef<Map<String, Object>> MAP_TYPE_REF = new TypeRef<>() {};
+    private static final TypeRef<Map<String, Object>> MAP_TYPE_REF = new TypeRef<>() {
+    };
 
     @NotNull
     @Builder.Default
@@ -73,14 +76,15 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
         Output.OutputBuilder outputBuilder = Output.builder().size((long) rowsAsMap.size());
         return (switch (runContext.render(fetchType).as(FetchType.class).orElseThrow()) {
             case FETCH -> outputBuilder
-                    .rows(rowsAsMap);
+                .rows(rowsAsMap);
             case FETCH_ONE -> outputBuilder
-                    .row(rowsAsMap.stream().findFirst().orElse(null));
+                .row(rowsAsMap.stream().findFirst().orElse(null));
             case STORE -> {
                 File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
                 BufferedWriter fileWriter = new BufferedWriter(new FileWriter(tempFile));
                 try (OutputStream outputStream = new FileOutputStream(tempFile)) {
-                    rowsAsMap.forEach(row -> {
+                    rowsAsMap.forEach(row ->
+                    {
                         try {
                             FileSerde.write(outputStream, row);
                         } catch (IOException e) {
@@ -106,8 +110,7 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
 
         if (parameters instanceof Map) {
             queryOptions.parameters(JsonObject.from((Map<String, ?>) parameters));
-        }
-        else if (parameters instanceof List) {
+        } else if (parameters instanceof List) {
             queryOptions.parameters(JsonArray.from((List<?>) parameters));
         }
 
