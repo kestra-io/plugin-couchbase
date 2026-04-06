@@ -25,6 +25,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -55,11 +56,14 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
 
     @NotNull
     @Builder.Default
+    @PluginProperty(group = "processing")
     protected Property<FetchType> fetchType = Property.ofValue(FetchType.STORE);
+    @PluginProperty(group = "main")
     protected Object parameters;
 
     @NotNull
     @NotBlank
+    @PluginProperty(group = "main")
     protected String query;
 
     public Output run(RunContext runContext) throws Exception {

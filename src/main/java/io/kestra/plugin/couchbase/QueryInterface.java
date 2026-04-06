@@ -13,7 +13,7 @@ public interface QueryInterface {
         title = "Renderable N1QL statement to run",
         description = "Rendered with flow variables before execution against Couchbase. Ensure bucket, scope, and collection references are accessible to the provided credentials."
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "processing")
     String getQuery();
 
     @Schema(
@@ -29,7 +29,7 @@ public interface QueryInterface {
             String[].class
         }
     )
-    @PluginProperty(
+    @PluginProperty(group = "advanced", 
         additionalProperties = String.class,
         dynamic = true
     )
@@ -39,5 +39,6 @@ public interface QueryInterface {
         title = "How to return or store query results",
         description = "Defaults to STORE, which writes all rows to Kestra internal storage. FETCH returns all rows inline, FETCH_ONE returns the first row, and NONE skips output."
     )
+    @PluginProperty(group = "execution")
     Property<FetchType> getFetchType();
 }
