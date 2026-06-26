@@ -53,7 +53,7 @@ import lombok.experimental.SuperBuilder;
                     interval: "PT5M"
                     connectionString: couchbase://localhost
                     username: couchbase_user
-                    password: couchbase_passwd
+                    password: "{{ secret('COUCHBASE_PASSWORD') }}"
                     query: SELECT * FROM `COUCHBASE_BUCKET`(.`COUCHBASE_SCOPE`.`COUCHBASE_COLLECTION`)
                     fetchType: FETCH
                 """
