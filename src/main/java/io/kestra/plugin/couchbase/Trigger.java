@@ -9,6 +9,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.models.triggers.*;
@@ -67,10 +68,13 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     @NotNull
     @NotBlank
+    @PluginProperty(secret = true, dynamic = true, group = "connection")
     protected String username;
 
     @NotNull
     @NotBlank
+    @ToString.Exclude
+    @PluginProperty(secret = true, dynamic = true, group = "connection")
     protected String password;
 
     @NotNull
