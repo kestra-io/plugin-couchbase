@@ -8,6 +8,8 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
 
+import io.kestra.core.models.annotations.PluginProperty;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -28,10 +30,13 @@ public abstract class CouchbaseConnection extends Task implements CouchbaseConne
 
     @NotNull
     @NotBlank
+    @PluginProperty(secret = true, dynamic = true, group = "connection")
     protected String username;
 
     @NotNull
     @NotBlank
+    @ToString.Exclude
+    @PluginProperty(secret = true, dynamic = true, group = "connection")
     protected String password;
 
     protected Cluster connect(RunContext runContext) throws IllegalVariableEvaluationException {

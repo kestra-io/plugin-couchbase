@@ -39,14 +39,21 @@ import io.kestra.core.models.annotations.PluginProperty;
 @Plugin(
     examples = {
         @Example(
-            title = "Send a N1QL query to a Couchbase database.",
-            code = {
-                "connectionString: couchbase://localhost",
-                "username: couchbase_user",
-                "password: couchbase_passwd",
-                "query: SELECT * FROM `COUCHBASE_BUCKET`(.`COUCHBASE_SCOPE`.`COUCHBASE_COLLECTION`)",
-                "fetchType: FETCH"
-            }
+            title = "Send a N1QL query to a Couchbase database",
+            full = true,
+            code = """
+                id: couchbase_query
+                namespace: company.team
+
+                tasks:
+                  - id: query
+                    type: io.kestra.plugin.couchbase.Query
+                    connectionString: couchbase://localhost
+                    username: couchbase_user
+                    password: "{{ secret('COUCHBASE_PASSWORD') }}"
+                    query: SELECT * FROM `COUCHBASE_BUCKET`
+                    fetchType: FETCH
+                """
         ),
     }
 )
