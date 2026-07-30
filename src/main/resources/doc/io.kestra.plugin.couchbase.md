@@ -1,3 +1,5 @@
+# How to use the Couchbase plugin
+
 This plugin runs N1QL queries against a Couchbase cluster and lets a flow react to query results.
 
 ## Tasks
@@ -5,7 +7,7 @@ This plugin runs N1QL queries against a Couchbase cluster and lets a flow react 
 - `Query` executes a N1QL statement and captures the result. Set `fetchType` to:
   - `FETCH` to return all rows inline in the task output,
   - `FETCH_ONE` to return only the first row,
-  - `STORE` to write the full result set to Kestra internal storage as an ion file.
+  - `STORE` to write the full result set to Kestra internal storage as an ION file.
 
 ## Triggers
 
