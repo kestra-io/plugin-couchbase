@@ -14,6 +14,7 @@ import com.couchbase.client.java.query.QueryResult;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchType;
@@ -25,7 +26,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -73,16 +73,33 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
     @PluginProperty(group = "main")
     protected String query;
 
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private transient Trigger trigger;
+
     public Output run(RunContext runContext) throws Exception {
         Cluster session = connect(runContext);
 
         String renderedQuery = runContext.render(query);
         QueryOptions parametersForQuery = getParametersForQuery();
-        QueryResult result = session.query(renderedQuery, parametersForQuery);
+
+        // Track cluster for kill() only during the blocking query call
+        if (trigger != null) {
+            trigger.setActiveCluster(session);
+        }
+        QueryResult result;
+        try {
+            result = session.query(renderedQuery, parametersForQuery);
+        } finally {
+            if (trigger != null) {
+                trigger.clearActiveCluster();
+            }
+        }
+
+        // Process results after cluster is no longer tracked for kill()
+        List<Map<String, Object>> rowsAsMap = result.rowsAs(MAP_TYPE_REF);
 
         close(session);
-
-        List<Map<String, Object>> rowsAsMap = result.rowsAs(MAP_TYPE_REF);
 
         Output.OutputBuilder outputBuilder = Output.builder().size((long) rowsAsMap.size());
         return (switch (runContext.render(fetchType).as(FetchType.class).orElseThrow()) {
@@ -113,7 +130,10 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
             }
             default -> outputBuilder;
         }).build();
+    }
 
+    void setTrigger(Trigger trigger) {
+        this.trigger = trigger;
     }
 
     private QueryOptions getParametersForQuery() {

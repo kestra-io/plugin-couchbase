@@ -29,7 +29,8 @@ public interface QueryInterface {
             String[].class
         }
     )
-    @PluginProperty(group = "advanced", 
+    @PluginProperty(
+        group = "advanced",
         additionalProperties = String.class,
         dynamic = true
     )
