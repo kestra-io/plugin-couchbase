@@ -14,6 +14,7 @@ import com.couchbase.client.java.query.QueryResult;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchType;
@@ -25,7 +26,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -92,7 +92,6 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
                 .row(rowsAsMap.stream().findFirst().orElse(null));
             case STORE -> {
                 File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
-                BufferedWriter fileWriter = new BufferedWriter(new FileWriter(tempFile));
                 try (OutputStream outputStream = new FileOutputStream(tempFile)) {
                     rowsAsMap.forEach(row ->
                     {
@@ -102,12 +101,7 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
                             throw new RuntimeException(e);
                         }
                     });
-                    FileSerde.write(outputStream, rowsAsMap);
                 }
-
-                fileWriter.flush();
-                fileWriter.close();
-
                 yield outputBuilder
                     .uri(runContext.storage().putFile(tempFile));
             }
