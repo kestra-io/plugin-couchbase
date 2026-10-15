@@ -1,5 +1,7 @@
 package io.kestra.plugin.couchbase;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +21,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.storages.StorageInterface;
 
@@ -205,5 +208,11 @@ class QueryTest extends CouchbaseTest {
         Query.Output queryResult = query.run(runContext);
 
         assertThat(queryResult.getSize(), is(1L));
+        List<Object> storedRows;
+        try (var reader = new BufferedReader(new InputStreamReader(runContext.storage().getFile(queryResult.getUri())))) {
+            storedRows = FileSerde.readAll(reader).collectList().block();
+        }
+        assertThat(storedRows, hasSize(1));
+        assertThat((Map<String, Object>) ((Map<String, Object>) storedRows.getFirst()).get(COLLECTION), hasEntry("c_string", "A collection doc"));
     }
 }
