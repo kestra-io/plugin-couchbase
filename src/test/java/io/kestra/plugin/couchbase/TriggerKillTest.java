@@ -1,262 +1,219 @@
 package io.kestra.plugin.couchbase;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ClusterOptions;
+import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.query.QueryResult;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.conditions.ConditionContext;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.common.FetchType;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+
+import jakarta.inject.Inject;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@KestraTest
 class TriggerKillTest {
+    @Inject
+    private RunContextFactory runContextFactory;
 
     private Trigger trigger;
+    private Cluster cluster;
+    private AsyncCluster asyncCluster;
+    private ClusterEnvironment environment;
+    private RunContext runContext;
+    private ConditionContext conditionContext;
 
     @BeforeEach
     void setUp() {
         trigger = Trigger.builder()
-            .id("test-trigger")
+            .id("watch")
             .type(Trigger.class.getName())
             .connectionString("couchbase://localhost")
             .username("Administrator")
             .password("password")
-            .query("SELECT * FROM bucket")
+            .query("SELECT 1")
+            .fetchType(Property.ofValue(FetchType.FETCH))
             .build();
+        cluster = mock(Cluster.class);
+        asyncCluster = mock(AsyncCluster.class);
+        environment = mock(ClusterEnvironment.class);
+        when(cluster.async()).thenReturn(asyncCluster);
+        when(cluster.environment()).thenReturn(environment);
+        when(asyncCluster.disconnect()).thenReturn(CompletableFuture.completedFuture(null));
+        runContext = runContextFactory.of();
+        conditionContext = mock(ConditionContext.class);
+        when(conditionContext.getRunContext()).thenReturn(runContext);
     }
 
     @Test
-    void killWithNoActiveClusterDoesNotThrow() {
-        // kill() should not throw when no cluster is active
-        trigger.kill();
-        // If we get here without exception, the test passes
-    }
-
-    @Test
-    void killBeforeEvaluationDoesNotThrow() {
-        // kill() before any evaluation should not throw
-        trigger.kill();
-        // If we get here without exception, the test passes
-    }
-
-    @Test
-    void killIsIdempotent() {
-        // Multiple calls to kill() should not throw
+    void killBeforeEvaluationIsIdempotentAndSkipsConnection() throws Exception {
         trigger.kill();
         trigger.kill();
+        try (var connections = mockStatic(Cluster.class)) {
+            assertEquals(Optional.empty(), trigger.evaluate(conditionContext, null));
+            connections.verifyNoInteractions();
+        }
+    }
+
+    @Test
+    void normalEmptyEvaluationClosesResources() throws Exception {
+        QueryResult result = mock(QueryResult.class);
+        when(result.rowsAs(any(com.couchbase.client.java.codec.TypeRef.class))).thenReturn(List.of());
+        when(cluster.query(anyString(), any(QueryOptions.class))).thenReturn(result);
+        evaluateWithCluster();
+        evaluateWithCluster();
         trigger.kill();
-        // If we get here without exception, the test passes
+        verify(cluster, times(2)).disconnect();
+        verify(environment, times(2)).shutdown();
+        verifyNoInteractions(asyncCluster);
     }
 
     @Test
-    void activeClusterIsInitiallyNull() {
-        // The active cluster reference should be null initially
-        assertThat(trigger.getActiveClusterForTest(), nullValue());
-    }
-
-    @Test
-    void killedFlagIsInitiallyFalse() {
-        // The killed flag should be false initially
-        assertThat(trigger.isKilledForTest(), is(false));
-    }
-
-    @Test
-    void killSetsKilledFlag() {
-        // kill() should set the killed flag
-        assertThat(trigger.isKilledForTest(), is(false));
+    void queryFailureClosesResourcesAndPropagates() {
+        IllegalStateException failure = new IllegalStateException("query failed");
+        when(cluster.query(anyString(), any(QueryOptions.class))).thenThrow(failure);
+        assertSame(failure, assertThrows(IllegalStateException.class, this::evaluateWithCluster));
         trigger.kill();
-        assertThat(trigger.isKilledForTest(), is(true));
+        verify(cluster).disconnect();
+        verify(environment).shutdown();
+        verifyNoInteractions(asyncCluster);
     }
 
     @Test
-    void killClearsActiveClusterReference() throws Exception {
-        // Set a mock cluster
-        Cluster mockCluster = mock(Cluster.class);
-        AsyncCluster mockAsyncCluster = mock(AsyncCluster.class);
-        when(mockCluster.async()).thenReturn(mockAsyncCluster);
-        trigger.setActiveCluster(mockCluster);
-
-        // Verify it's set
-        assertThat(trigger.getActiveClusterForTest(), sameInstance(mockCluster));
-
-        // Call kill
-        trigger.kill();
-
-        // Verify it's cleared
-        assertThat(trigger.getActiveClusterForTest(), nullValue());
-
-        // Verify the cluster was actually disconnected via the non-blocking async API
-        verify(mockAsyncCluster).disconnect();
-    }
-
-    @Test
-    void killDuringActiveQueryUnblocksCluster() throws Exception {
-        // Test that kill() disconnects the cluster when one is active
-        Cluster mockCluster = mock(Cluster.class);
-        AsyncCluster mockAsyncCluster = mock(AsyncCluster.class);
-        when(mockCluster.async()).thenReturn(mockAsyncCluster);
-        trigger.setActiveCluster(mockCluster);
-
-        // Call kill from another thread to simulate concurrent access
-        Thread killThread = new Thread(() -> trigger.kill());
-        killThread.start();
-        killThread.join(1000);
-
-        // Verify the cluster was actually disconnected via the non-blocking async API
-        verify(mockAsyncCluster).disconnect();
-
-        // Verify cluster reference is cleared
-        assertThat(trigger.getActiveClusterForTest(), nullValue());
-    }
-
-    @Test
-    void clearActiveClusterClearsReference() {
-        // Set a mock cluster
-        Cluster mockCluster = mock(Cluster.class);
-        trigger.setActiveCluster(mockCluster);
-
-        // Verify it's set
-        assertThat(trigger.getActiveClusterForTest(), sameInstance(mockCluster));
-
-        // Call clearActiveCluster
-        trigger.clearActiveCluster();
-
-        // Verify it's cleared
-        assertThat(trigger.getActiveClusterForTest(), nullValue());
-    }
-
-    @Test
-    void killBeforeClusterPublicationDoesNotLoseCancellation() throws Exception {
-        // kill() before setActiveCluster() should not lose the cancellation
-        trigger.kill();
-
-        // Now publish a cluster - it should be immediately disconnected
-        Cluster mockCluster = mock(Cluster.class);
-        AsyncCluster mockAsyncCluster = mock(AsyncCluster.class);
-        when(mockCluster.async()).thenReturn(mockAsyncCluster);
-        trigger.setActiveCluster(mockCluster);
-
-        // The cluster should have been actually disconnected via the non-blocking async API
-        verify(mockAsyncCluster).disconnect();
-
-        // Active cluster should remain null
-        assertThat(trigger.getActiveClusterForTest(), nullValue());
-    }
-
-    @Test
-    void concurrentKillAndClusterPublicationNeverLosesCancellation() throws Exception {
-        // Test the critical race: kill() happens concurrently with setActiveCluster().
-        // The latches below only guarantee both threads are in flight at the same time;
-        // they do not control which thread acquires the lifecycle lock first, so this test
-        // does not prove a specific kill-wins interleaving. Instead it proves the property
-        // that holds for every interleaving: exactly one side disconnects the cluster and
-        // the active cluster reference ends up null, so cancellation is never lost.
-
-        CountDownLatch killStarted = new CountDownLatch(1);
-        CountDownLatch setClusterStarted = new CountDownLatch(1);
-        CountDownLatch doneLatch = new CountDownLatch(2);
-        AtomicReference<Exception> exceptionRef = new AtomicReference<>();
-
-        Cluster mockCluster = mock(Cluster.class);
-        AsyncCluster mockAsyncCluster = mock(AsyncCluster.class);
-        when(mockCluster.async()).thenReturn(mockAsyncCluster);
-
-        // Thread 1: calls kill()
-        Thread killThread = new Thread(() ->
-        {
-            try {
-                killStarted.countDown(); // Signal kill started
-                setClusterStarted.await(); // Wait for setActiveCluster to start
+    void killDuringConnectionDisconnectsLateClusterAndSkipsQuery() throws Exception {
+        try (
+            var environments = mockStatic(ClusterEnvironment.class);
+            var connections = mockStatic(Cluster.class)
+        ) {
+            environments.when(ClusterEnvironment::create).thenReturn(environment);
+            connections.when(() -> Cluster.connect(anyString(), any(ClusterOptions.class))).thenAnswer(invocation ->
+            {
                 trigger.kill();
-            } catch (Exception e) {
-                exceptionRef.set(e);
-            } finally {
-                doneLatch.countDown();
-            }
-        });
+                return cluster;
+            });
+            assertEquals(Optional.empty(), trigger.evaluate(conditionContext, null));
+        }
+        verify(asyncCluster).disconnect();
+        verify(environment).shutdownAsync();
+        verify(cluster, never()).query(anyString(), any(QueryOptions.class));
+        verify(cluster).disconnect();
+        verify(environment).shutdown();
+    }
 
-        // Thread 2: calls setActiveCluster()
-        Thread setClusterThread = new Thread(() ->
+    @Test
+    void killUnblocksQueryAndSuppressesCancellationFailure() throws Exception {
+        CountDownLatch querying = new CountDownLatch(1);
+        CountDownLatch disconnected = new CountDownLatch(1);
+        when(asyncCluster.disconnect()).thenAnswer(invocation ->
+        {
+            disconnected.countDown();
+            return CompletableFuture.completedFuture(null);
+        });
+        when(cluster.query(anyString(), any(QueryOptions.class))).thenAnswer(invocation ->
+        {
+            querying.countDown();
+            assertTrue(disconnected.await(5, TimeUnit.SECONDS));
+            throw new IllegalStateException("cluster disconnected");
+        });
+        CompletableFuture<Void> killer = CompletableFuture.runAsync(() ->
         {
             try {
-                killStarted.await(); // Wait for kill to start
-                setClusterStarted.countDown(); // Signal setActiveCluster started
-                trigger.setActiveCluster(mockCluster);
-            } catch (Exception e) {
-                exceptionRef.set(e);
-            } finally {
-                doneLatch.countDown();
+                assertTrue(querying.await(5, TimeUnit.SECONDS));
+                trigger.kill();
+                trigger.kill();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         });
-
-        killThread.start();
-        setClusterThread.start();
-
-        assertThat(doneLatch.await(5, TimeUnit.SECONDS), is(true));
-        assertThat(exceptionRef.get(), nullValue());
-
-        // Whichever side won, the cluster was actually disconnected via the non-blocking
-        // async API exactly once: either kill() took the published cluster, or
-        // setActiveCluster() saw the killed flag and disconnected the late cluster.
-        verify(mockAsyncCluster).disconnect();
-
-        // The active cluster reference must never be left populated after a kill.
-        assertThat(trigger.getActiveClusterForTest(), nullValue());
+        evaluateWithCluster();
+        killer.get(5, TimeUnit.SECONDS);
+        verify(asyncCluster).disconnect();
+        verify(environment).shutdownAsync();
+        verify(cluster).disconnect();
+        verify(environment).shutdown();
     }
 
     @Test
-    void evaluateAfterKillDoesNotGenerateExecution() throws Exception {
-        // kill() before evaluation should prevent execution generation
-        trigger.kill();
-
-        // We can't easily test the full evaluate() without a real Couchbase instance,
-        // but we can verify the killed flag prevents work
-        assertThat(trigger.isKilledForTest(), is(true));
+    void killDuringSuccessfulQuerySuppressesExecution() throws Exception {
+        QueryResult result = mock(QueryResult.class);
+        when(result.rowsAs(any(com.couchbase.client.java.codec.TypeRef.class))).thenReturn(List.of(java.util.Map.of("value", 1)));
+        when(cluster.query(anyString(), any(QueryOptions.class))).thenAnswer(invocation ->
+        {
+            trigger.kill();
+            return result;
+        });
+        evaluateWithCluster();
+        verify(asyncCluster).disconnect();
+        verify(environment).shutdownAsync();
     }
 
     @Test
-    void killReturnsPromptly() throws Exception {
-        // kill() should return quickly and not block
-        Cluster mockCluster = mock(Cluster.class);
-        AsyncCluster mockAsyncCluster = mock(AsyncCluster.class);
-        when(mockCluster.async()).thenReturn(mockAsyncCluster);
-        trigger.setActiveCluster(mockCluster);
-
-        long start = System.currentTimeMillis();
-        trigger.kill();
-        long elapsed = System.currentTimeMillis() - start;
-
-        // kill() should return in well under 100ms (async disconnect is non-blocking)
-        assertThat(elapsed, lessThan(100L));
-
-        // And the disconnect must have actually been issued via the async API
-        verify(mockAsyncCluster).disconnect();
+    void failedAsyncDisconnectStillShutsDownEnvironment() throws Exception {
+        when(asyncCluster.disconnect()).thenReturn(CompletableFuture.failedFuture(new IllegalStateException("disconnect failed")));
+        when(cluster.query(anyString(), any(QueryOptions.class))).thenAnswer(invocation ->
+        {
+            trigger.kill();
+            throw new IllegalStateException("cancelled");
+        });
+        evaluateWithCluster();
+        verify(environment).shutdownAsync();
+        verify(environment).shutdown();
     }
 
     @Test
-    void multipleKillCallsAreSafe() {
-        // Multiple kill() calls should be safe (idempotent)
-        trigger.kill();
-        trigger.kill();
-        trigger.kill();
-
-        // All calls should complete without exception
-        assertThat(trigger.isKilledForTest(), is(true));
+    void killDoesNotWaitForAsyncDisconnect() throws Exception {
+        CompletableFuture<Void> disconnect = new CompletableFuture<>();
+        when(asyncCluster.disconnect()).thenReturn(disconnect);
+        when(cluster.query(anyString(), any(QueryOptions.class))).thenAnswer(invocation ->
+        {
+            trigger.kill();
+            assertFalse(disconnect.isDone());
+            verify(environment, never()).shutdownAsync();
+            disconnect.complete(null);
+            throw new IllegalStateException("cancelled");
+        });
+        evaluateWithCluster();
+        verify(environment).shutdownAsync();
     }
 
     @Test
-    void normalCompletionClearsActiveReference() {
-        // After normal query completion (simulated by clearActiveCluster), reference should be null
-        Cluster mockCluster = mock(Cluster.class);
-        trigger.setActiveCluster(mockCluster);
-        assertThat(trigger.getActiveClusterForTest(), sameInstance(mockCluster));
+    void synchronousDisconnectFailureStillShutsDownEnvironment() throws Exception {
+        when(asyncCluster.disconnect()).thenThrow(new IllegalStateException("disconnect failed"));
+        when(cluster.query(anyString(), any(QueryOptions.class))).thenAnswer(invocation ->
+        {
+            trigger.kill();
+            throw new IllegalStateException("cancelled");
+        });
+        evaluateWithCluster();
+        verify(environment).shutdownAsync();
+    }
 
-        trigger.clearActiveCluster();
-        assertThat(trigger.getActiveClusterForTest(), nullValue());
+    private void evaluateWithCluster() throws Exception {
+        try (
+            var environments = mockStatic(ClusterEnvironment.class);
+            var connections = mockStatic(Cluster.class)
+        ) {
+            environments.when(ClusterEnvironment::create).thenReturn(environment);
+            connections.when(() -> Cluster.connect(anyString(), any(ClusterOptions.class))).thenReturn(cluster);
+            assertEquals(Optional.empty(), trigger.evaluate(conditionContext, null));
+        }
     }
 }

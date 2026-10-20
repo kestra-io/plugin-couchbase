@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.codec.TypeRef;
@@ -73,33 +74,24 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
     @PluginProperty(group = "main")
     protected String query;
 
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
-    private transient Trigger trigger;
-
+    @Override
     public Output run(RunContext runContext) throws Exception {
+        return run(runContext, cluster ->
+        {
+        });
+    }
+
+    Output run(RunContext runContext, Consumer<Cluster> onConnect) throws Exception {
         Cluster session = connect(runContext);
-
-        String renderedQuery = runContext.render(query);
-        QueryOptions parametersForQuery = getParametersForQuery();
-
-        // Track cluster for kill() only during the blocking query call
-        if (trigger != null) {
-            trigger.setActiveCluster(session);
-        }
-        QueryResult result;
+        List<Map<String, Object>> rowsAsMap;
         try {
-            result = session.query(renderedQuery, parametersForQuery);
+            onConnect.accept(session);
+            String renderedQuery = runContext.render(query);
+            QueryResult result = session.query(renderedQuery, getParametersForQuery());
+            rowsAsMap = result.rowsAs(MAP_TYPE_REF);
         } finally {
-            if (trigger != null) {
-                trigger.clearActiveCluster();
-            }
+            close(session);
         }
-
-        // Process results after cluster is no longer tracked for kill()
-        List<Map<String, Object>> rowsAsMap = result.rowsAs(MAP_TYPE_REF);
-
-        close(session);
 
         Output.OutputBuilder outputBuilder = Output.builder().size((long) rowsAsMap.size());
         return (switch (runContext.render(fetchType).as(FetchType.class).orElseThrow()) {
@@ -130,10 +122,6 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
             }
             default -> outputBuilder;
         }).build();
-    }
-
-    void setTrigger(Trigger trigger) {
-        this.trigger = trigger;
     }
 
     private QueryOptions getParametersForQuery() {

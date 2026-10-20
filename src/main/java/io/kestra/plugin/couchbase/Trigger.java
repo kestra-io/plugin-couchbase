@@ -8,6 +8,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.couchbase.client.java.Cluster;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -95,18 +98,25 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder.Default
     protected final Duration interval = Duration.ofSeconds(60);
 
+    @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private final transient Lock lifecycleLock = new ReentrantLock();
 
     @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private final transient AtomicBoolean killed = new AtomicBoolean(false);
 
     @Getter(AccessLevel.NONE)
-    private final transient AtomicReference<com.couchbase.client.java.Cluster> activeCluster = new AtomicReference<>();
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private final transient AtomicReference<Cluster> activeCluster = new AtomicReference<>();
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
-        // Check killed flag before starting any work
         if (killed.get()) {
+            LoggerFactory.getLogger(Trigger.class).warn("Skipping evaluation of killed Couchbase trigger '{}'", id);
             return Optional.empty();
         }
 
@@ -123,11 +133,18 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .parameters(parameters)
             .fetchType(fetchType)
             .build();
-        queryTask.setTrigger(this);
+        Query.Output run;
+        try {
+            run = queryTask.run(runContext, this::setActiveCluster);
+        } catch (Exception e) {
+            if (killed.get()) {
+                return Optional.empty();
+            }
+            throw e;
+        } finally {
+            clearActiveCluster();
+        }
 
-        Query.Output run = queryTask.run(runContext);
-
-        // If killed during evaluation, don't generate execution
         if (killed.get()) {
             return Optional.empty();
         }
@@ -145,65 +162,57 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     @Override
     public void kill() {
-        // 1. Set killed flag FIRST (outside lock) - allows setActiveCluster to quickly detect
         killed.set(true);
-
-        // 2. Now take the active cluster under lock - no one can publish after we took it
-        com.couchbase.client.java.Cluster cluster;
+        Cluster cluster;
+        lifecycleLock.lock();
         try {
-            lifecycleLock.lock();
             cluster = activeCluster.getAndSet(null);
         } finally {
             lifecycleLock.unlock();
         }
-
-        // 3. Disconnect outside lock (non-blocking, async)
         if (cluster != null) {
-            try {
-                cluster.async().disconnect();
-            } catch (Exception ignored) {
-                // Best effort disconnect
-            }
+            disconnect(cluster);
         }
     }
 
-    void setActiveCluster(com.couchbase.client.java.Cluster cluster) {
-        com.couchbase.client.java.Cluster toDisconnect = null;
+    private void setActiveCluster(Cluster cluster) {
+        boolean cancelled;
+        lifecycleLock.lock();
         try {
-            lifecycleLock.lock();
-            if (killed.get()) {
-                // Kill already won - disconnect this cluster immediately
-                toDisconnect = cluster;
-            } else {
+            cancelled = killed.get();
+            if (!cancelled) {
                 activeCluster.set(cluster);
             }
         } finally {
             lifecycleLock.unlock();
         }
-        // Disconnect outside lock (non-blocking)
-        if (toDisconnect != null) {
-            try {
-                toDisconnect.async().disconnect();
-            } catch (Exception ignored) {
-            }
+        if (cancelled) {
+            disconnect(cluster);
+            throw new IllegalStateException("Couchbase trigger was killed");
         }
     }
 
-    void clearActiveCluster() {
+    private void disconnect(Cluster cluster) {
         try {
-            lifecycleLock.lock();
+            cluster.async().disconnect().whenComplete((result, error) ->
+            {
+                if (error != null) {
+                    LoggerFactory.getLogger(Trigger.class).warn("Failed to disconnect killed Couchbase trigger", error);
+                }
+                cluster.environment().shutdownAsync();
+            });
+        } catch (Exception e) {
+            LoggerFactory.getLogger(Trigger.class).warn("Failed to disconnect killed Couchbase trigger", e);
+            cluster.environment().shutdownAsync();
+        }
+    }
+
+    private void clearActiveCluster() {
+        lifecycleLock.lock();
+        try {
             activeCluster.set(null);
         } finally {
             lifecycleLock.unlock();
         }
-    }
-
-    // Test accessor
-    boolean isKilledForTest() {
-        return killed.get();
-    }
-
-    com.couchbase.client.java.Cluster getActiveClusterForTest() {
-        return activeCluster.get();
     }
 }

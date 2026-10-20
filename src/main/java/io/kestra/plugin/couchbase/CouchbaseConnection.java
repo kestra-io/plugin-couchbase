@@ -50,7 +50,10 @@ public abstract class CouchbaseConnection extends Task implements CouchbaseConne
     }
 
     protected void close(Cluster cluster) {
-        cluster.disconnect();
-        cluster.environment().shutdown();
+        try {
+            cluster.disconnect();
+        } finally {
+            cluster.environment().shutdown();
+        }
     }
 }
