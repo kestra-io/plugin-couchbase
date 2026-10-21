@@ -2,18 +2,23 @@ package io.kestra.plugin.couchbase;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 
+import com.couchbase.client.java.Cluster;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.models.triggers.*;
-import io.kestra.core.runners.RunContext;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -91,12 +96,31 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder.Default
     protected final Duration interval = Duration.ofSeconds(60);
 
+    @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private final transient Lock lifecycleLock = new ReentrantLock();
+
+    @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private final transient AtomicBoolean killed = new AtomicBoolean(false);
+
+    @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private final transient AtomicReference<ActiveCluster> activeCluster = new AtomicReference<>();
+
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
-        RunContext runContext = conditionContext.getRunContext();
-        Logger logger = runContext.logger();
+        var runContext = conditionContext.getRunContext();
+        var logger = runContext.logger();
+        if (killed.get()) {
+            logger.warn("Skipping evaluation of killed Couchbase trigger '{}'", id);
+            return Optional.empty();
+        }
 
-        Query.Output run = Query.builder()
+        var queryTask = Query.builder()
             .id(id)
             .type(Query.class.getName())
             .connectionString(connectionString)
@@ -105,7 +129,22 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .query(query)
             .parameters(parameters)
             .fetchType(fetchType)
-            .build().run(runContext);
+            .build();
+        Query.Output run;
+        try {
+            run = queryTask.run(runContext, cluster -> setActiveCluster(cluster, logger));
+        } catch (Exception e) {
+            if (killed.get()) {
+                return Optional.empty();
+            }
+            throw e;
+        } finally {
+            clearActiveCluster();
+        }
+
+        if (killed.get()) {
+            return Optional.empty();
+        }
 
         logger.debug("Found '{}' rows from '{}'", run.getSize(), runContext.render(this.query));
 
@@ -113,8 +152,67 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             return Optional.empty();
         }
 
-        Execution execution = TriggerService.generateExecution(this, conditionContext, context, run);
+        var execution = TriggerService.generateExecution(this, conditionContext, context, run);
 
         return Optional.of(execution);
+    }
+
+    @Override
+    public void kill() {
+        killed.set(true);
+        ActiveCluster active;
+        lifecycleLock.lock();
+        try {
+            active = activeCluster.getAndSet(null);
+        } finally {
+            lifecycleLock.unlock();
+        }
+        if (active != null) {
+            disconnect(active.cluster(), active.logger());
+        }
+    }
+
+    private void setActiveCluster(Cluster cluster, Logger logger) {
+        boolean cancelled;
+        lifecycleLock.lock();
+        try {
+            cancelled = killed.get();
+            if (!cancelled) {
+                activeCluster.set(new ActiveCluster(cluster, logger));
+            }
+        } finally {
+            lifecycleLock.unlock();
+        }
+        if (cancelled) {
+            disconnect(cluster, logger);
+            throw new IllegalStateException("Couchbase trigger was killed");
+        }
+    }
+
+    private void disconnect(Cluster cluster, Logger logger) {
+        try {
+            cluster.async().disconnect().whenComplete((result, error) ->
+            {
+                if (error != null) {
+                    logger.warn("Failed to disconnect killed Couchbase trigger", error);
+                }
+                cluster.environment().shutdownAsync();
+            });
+        } catch (Exception e) {
+            logger.warn("Failed to disconnect killed Couchbase trigger", e);
+            cluster.environment().shutdownAsync();
+        }
+    }
+
+    private void clearActiveCluster() {
+        lifecycleLock.lock();
+        try {
+            activeCluster.set(null);
+        } finally {
+            lifecycleLock.unlock();
+        }
+    }
+
+    private record ActiveCluster(Cluster cluster, Logger logger) {
     }
 }

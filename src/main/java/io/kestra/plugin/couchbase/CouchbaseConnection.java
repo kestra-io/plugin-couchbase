@@ -5,10 +5,9 @@ import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
-
-import io.kestra.core.models.annotations.PluginProperty;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -51,7 +50,10 @@ public abstract class CouchbaseConnection extends Task implements CouchbaseConne
     }
 
     protected void close(Cluster cluster) {
-        cluster.disconnect();
-        cluster.environment().shutdown();
+        try {
+            cluster.disconnect();
+        } finally {
+            cluster.environment().shutdown();
+        }
     }
 }
