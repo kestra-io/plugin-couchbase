@@ -11,7 +11,6 @@ import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryOptions;
-import com.couchbase.client.java.query.QueryResult;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -82,18 +81,18 @@ public class Query extends CouchbaseConnection implements RunnableTask<Query.Out
     }
 
     Output run(RunContext runContext, Consumer<Cluster> onConnect) throws Exception {
-        Cluster session = connect(runContext);
+        var session = connect(runContext);
         List<Map<String, Object>> rowsAsMap;
         try {
             onConnect.accept(session);
-            String renderedQuery = runContext.render(query);
-            QueryResult result = session.query(renderedQuery, getParametersForQuery());
+            var renderedQuery = runContext.render(query);
+            var result = session.query(renderedQuery, getParametersForQuery());
             rowsAsMap = result.rowsAs(MAP_TYPE_REF);
         } finally {
             close(session);
         }
 
-        Output.OutputBuilder outputBuilder = Output.builder().size((long) rowsAsMap.size());
+        var outputBuilder = Output.builder().size((long) rowsAsMap.size());
         return (switch (runContext.render(fetchType).as(FetchType.class).orElseThrow()) {
             case FETCH -> outputBuilder
                 .rows(rowsAsMap);

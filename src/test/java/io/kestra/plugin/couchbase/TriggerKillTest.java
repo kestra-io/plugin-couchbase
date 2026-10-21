@@ -1,6 +1,7 @@
 package io.kestra.plugin.couchbase;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -8,10 +9,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
 
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
+import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
@@ -22,6 +25,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.utils.IdUtils;
 
 import jakarta.inject.Inject;
 
@@ -40,11 +44,12 @@ class TriggerKillTest {
     private ClusterEnvironment environment;
     private RunContext runContext;
     private ConditionContext conditionContext;
+    private Logger logger;
 
     @BeforeEach
     void setUp() {
         trigger = Trigger.builder()
-            .id("watch")
+            .id(IdUtils.create())
             .type(Trigger.class.getName())
             .connectionString("couchbase://localhost")
             .username("Administrator")
@@ -58,7 +63,9 @@ class TriggerKillTest {
         when(cluster.async()).thenReturn(asyncCluster);
         when(cluster.environment()).thenReturn(environment);
         when(asyncCluster.disconnect()).thenReturn(CompletableFuture.completedFuture(null));
-        runContext = runContextFactory.of();
+        runContext = spy(runContextFactory.of());
+        logger = mock(Logger.class);
+        doReturn(logger).when(runContext).logger();
         conditionContext = mock(ConditionContext.class);
         when(conditionContext.getRunContext()).thenReturn(runContext);
     }
@@ -70,13 +77,14 @@ class TriggerKillTest {
         try (var connections = mockStatic(Cluster.class)) {
             assertEquals(Optional.empty(), trigger.evaluate(conditionContext, null));
             connections.verifyNoInteractions();
+            verify(logger).warn("Skipping evaluation of killed Couchbase trigger '{}'", trigger.getId());
         }
     }
 
     @Test
     void normalEmptyEvaluationClosesResources() throws Exception {
-        QueryResult result = mock(QueryResult.class);
-        when(result.rowsAs(any(com.couchbase.client.java.codec.TypeRef.class))).thenReturn(List.of());
+        var result = mock(QueryResult.class);
+        when(result.rowsAs(any(TypeRef.class))).thenReturn(List.of());
         when(cluster.query(anyString(), any(QueryOptions.class))).thenReturn(result);
         evaluateWithCluster();
         evaluateWithCluster();
@@ -88,7 +96,7 @@ class TriggerKillTest {
 
     @Test
     void queryFailureClosesResourcesAndPropagates() {
-        IllegalStateException failure = new IllegalStateException("query failed");
+        var failure = new IllegalStateException("query failed");
         when(cluster.query(anyString(), any(QueryOptions.class))).thenThrow(failure);
         assertSame(failure, assertThrows(IllegalStateException.class, this::evaluateWithCluster));
         trigger.kill();
@@ -120,8 +128,8 @@ class TriggerKillTest {
 
     @Test
     void killUnblocksQueryAndSuppressesCancellationFailure() throws Exception {
-        CountDownLatch querying = new CountDownLatch(1);
-        CountDownLatch disconnected = new CountDownLatch(1);
+        var querying = new CountDownLatch(1);
+        var disconnected = new CountDownLatch(1);
         when(asyncCluster.disconnect()).thenAnswer(invocation ->
         {
             disconnected.countDown();
@@ -133,7 +141,7 @@ class TriggerKillTest {
             assertTrue(disconnected.await(5, TimeUnit.SECONDS));
             throw new IllegalStateException("cluster disconnected");
         });
-        CompletableFuture<Void> killer = CompletableFuture.runAsync(() ->
+        var killer = CompletableFuture.runAsync(() ->
         {
             try {
                 assertTrue(querying.await(5, TimeUnit.SECONDS));
@@ -153,8 +161,8 @@ class TriggerKillTest {
 
     @Test
     void killDuringSuccessfulQuerySuppressesExecution() throws Exception {
-        QueryResult result = mock(QueryResult.class);
-        when(result.rowsAs(any(com.couchbase.client.java.codec.TypeRef.class))).thenReturn(List.of(java.util.Map.of("value", 1)));
+        var result = mock(QueryResult.class);
+        when(result.rowsAs(any(TypeRef.class))).thenReturn(List.of(Map.of("value", 1)));
         when(cluster.query(anyString(), any(QueryOptions.class))).thenAnswer(invocation ->
         {
             trigger.kill();
@@ -167,20 +175,24 @@ class TriggerKillTest {
 
     @Test
     void failedAsyncDisconnectStillShutsDownEnvironment() throws Exception {
-        when(asyncCluster.disconnect()).thenReturn(CompletableFuture.failedFuture(new IllegalStateException("disconnect failed")));
+        var failure = new IllegalStateException("disconnect failed");
+        var disconnect = new CompletableFuture<Void>();
+        when(asyncCluster.disconnect()).thenReturn(disconnect);
         when(cluster.query(anyString(), any(QueryOptions.class))).thenAnswer(invocation ->
         {
             trigger.kill();
             throw new IllegalStateException("cancelled");
         });
         evaluateWithCluster();
+        CompletableFuture.runAsync(() -> disconnect.completeExceptionally(failure)).get(5, TimeUnit.SECONDS);
+        verify(logger).warn("Failed to disconnect killed Couchbase trigger", failure);
         verify(environment).shutdownAsync();
         verify(environment).shutdown();
     }
 
     @Test
     void killDoesNotWaitForAsyncDisconnect() throws Exception {
-        CompletableFuture<Void> disconnect = new CompletableFuture<>();
+        var disconnect = new CompletableFuture<Void>();
         when(asyncCluster.disconnect()).thenReturn(disconnect);
         when(cluster.query(anyString(), any(QueryOptions.class))).thenAnswer(invocation ->
         {
@@ -196,7 +208,8 @@ class TriggerKillTest {
 
     @Test
     void synchronousDisconnectFailureStillShutsDownEnvironment() throws Exception {
-        when(asyncCluster.disconnect()).thenThrow(new IllegalStateException("disconnect failed"));
+        var failure = new IllegalStateException("disconnect failed");
+        when(asyncCluster.disconnect()).thenThrow(failure);
         when(cluster.query(anyString(), any(QueryOptions.class))).thenAnswer(invocation ->
         {
             trigger.kill();
@@ -204,6 +217,7 @@ class TriggerKillTest {
         });
         evaluateWithCluster();
         verify(environment).shutdownAsync();
+        verify(logger).warn("Failed to disconnect killed Couchbase trigger", failure);
     }
 
     private void evaluateWithCluster() throws Exception {
